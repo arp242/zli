@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"zgo.at/zli/isatty"
@@ -82,4 +83,35 @@ func FileOrInput(path string) (io.ReadCloser, error) {
 		return nil, err
 	}
 	return fp, nil
+}
+
+// Pager pipes the content of out to $PAGER, or prints it to stdout of this
+// fails.
+func Pager(out io.Reader) {
+	pager := os.Getenv("PAGER")
+	if pager == "" {
+		io.Copy(os.Stdout, out)
+		return
+	}
+
+	pager, err := exec.LookPath(pager)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "running $PAGER: %s\n", err)
+		io.Copy(os.Stdout, out)
+		return
+	}
+
+	cmd := exec.Command(pager)
+	cmd.Stdin = out
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Start()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "running $PAGER: %s\n", err)
+		io.Copy(os.Stdout, out)
+		return
+	}
+
+	_ = cmd.Wait()
 }
