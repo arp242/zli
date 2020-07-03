@@ -55,6 +55,13 @@ func Fatal(s interface{}, args ...interface{}) {
 	exit(1)
 }
 
+// F is like Fatal(), but won't do anything for nil errors.
+func F(err error) {
+	if err != nil {
+		Fatal(err)
+	}
+}
+
 // FileOrInput will read from stdin if path is "" or "-", or the path otherwise.
 //
 // It will print a message to stderr notifying the user it's reading from stdin.
