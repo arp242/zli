@@ -69,9 +69,7 @@ func F(err error) {
 // See: https://www.arp242.net/read-stdin.html
 func FileOrInput(path string) (io.ReadCloser, error) {
 	if path == "" || path == "-" {
-		interactive := isatty.IsTerminal(stdin.Fd())
-
-		if interactive {
+		if isatty.IsTerminal(stdin.Fd()) {
 			fmt.Fprintf(stderr, "  %s: reading from stdin...\r", filepath.Base(os.Args[0]))
 			os.Stderr.Sync()
 		}
@@ -88,28 +86,33 @@ func FileOrInput(path string) (io.ReadCloser, error) {
 // Pager pipes the content of out to $PAGER, or prints it to stdout of this
 // fails.
 func Pager(out io.Reader) {
+	if !isatty.IsTerminal(stdin.Fd()) {
+		io.Copy(stdout, out)
+		return
+	}
+
 	pager := os.Getenv("PAGER")
 	if pager == "" {
-		io.Copy(os.Stdout, out)
+		io.Copy(stdout, out)
 		return
 	}
 
 	pager, err := exec.LookPath(pager)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "running $PAGER: %s\n", err)
-		io.Copy(os.Stdout, out)
+		fmt.Fprintf(stderr, "running $PAGER: %s\n", err)
+		io.Copy(stdout, out)
 		return
 	}
 
 	cmd := exec.Command(pager)
 	cmd.Stdin = out
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	err = cmd.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "running $PAGER: %s\n", err)
-		io.Copy(os.Stdout, out)
+		io.Copy(stdout, out)
 		return
 	}
 
