@@ -19,4 +19,8 @@ fp, err := zli.FileOrInput("/a-file")  // Read from file.
 // Display in $PAGER.
 fp, _ := os.Open("/file")
 zli.Pager(fp)
+
+// Get terminal size, check if stdout is a terminal.
+width, height, err := zli.TerminalSize(os.Stdout.Fd())
+interactive := zli.IsTerminal(os.Stdout.Fd())
 ```

@@ -8,7 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"zgo.at/zli/isatty"
+	"zgo.at/zli/internal/isatty"
+	"zgo.at/zli/internal/terminal"
 )
 
 type in interface {
@@ -23,18 +24,33 @@ var (
 	stderr io.Writer = os.Stderr
 )
 
+// IsTerminal reports if this file descriptor is an interactive terminal.
+func IsTerminal(fd uintptr) bool {
+	return isatty.IsTerminal(fd)
+}
+
+// TerminalSize gets the dimensions of the given terminal.
+func TerminalSize(fd uintptr) (width, height int, err error) {
+	return terminal.GetSize(int(fd))
+}
+
+// Program gets the program name from argv.
+func Program() string {
+	if len(os.Args) == 0 {
+		return ""
+	}
+	return filepath.Base(os.Args[0])
+}
+
 // Fatal prints the given message to stderr and exits.
 //
 //   Fatal("oh noes: %q", something)   // printf arguments
 //   Fatal(err)                        // Print err.Error()
 //   Fatal(123)                        // Print %v (makes little sense, but okay)
 func Fatal(s interface{}, args ...interface{}) {
-	var prog string
-	if len(os.Args) >= 0 {
-		prog = filepath.Base(os.Args[0])
-		if prog != "" {
-			prog += ": "
-		}
+	prog := Program()
+	if prog != "" {
+		prog += ": "
 	}
 
 	switch ss := s.(type) {
@@ -69,7 +85,7 @@ func F(err error) {
 // See: https://www.arp242.net/read-stdin.html
 func FileOrInput(path string) (io.ReadCloser, error) {
 	if path == "" || path == "-" {
-		if isatty.IsTerminal(stdin.Fd()) {
+		if IsTerminal(os.Stdin.Fd()) {
 			fmt.Fprintf(stderr, "  %s: reading from stdin...\r", filepath.Base(os.Args[0]))
 			os.Stderr.Sync()
 		}
@@ -86,7 +102,7 @@ func FileOrInput(path string) (io.ReadCloser, error) {
 // Pager pipes the content of out to $PAGER, or prints it to stdout of this
 // fails.
 func Pager(out io.Reader) {
-	if !isatty.IsTerminal(stdin.Fd()) {
+	if !IsTerminal(os.Stdout.Fd()) {
 		io.Copy(stdout, out)
 		return
 	}
