@@ -9,7 +9,7 @@ import (
 	"zgo.at/zli"
 )
 
-func ExampleFlag() {
+func ExampleFlags() {
 	// Create new flags from os.Args.
 	f := zli.NewFlags([]string{"example", "-vv", "-f=csv", "-a", "xx", "yy"})
 
