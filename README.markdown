@@ -102,16 +102,16 @@ user set `--color=force` or something.
 `zli.Colorln()` is a convenience wrapped for `fmt.Println(zli.Color(...))`.
 
 ```go
-zli.Colorln("You're looking rather red", zli.Red)    // Apply a colour.
-zli.Colorln("A bold move", zli.Bold)                 // Or an attribute.
-zli.Colorln("Tomato", zli.Red.Bg())                  // Apply background colour.
+zli.Colorln("You're looking rather red", zli.Red)     // Apply a colour.
+zli.Colorln("A bold move", zli.Bold)                  // Or an attribute.
+zli.Colorln("Tomato", zli.Red.Bg())                   // Transform to background colour.
 
-zli.Colorln("Wow, such beautiful text",              // Can be combined.
+zli.Colorln("Wow, such beautiful text",               // Can be combined.
     zli.Bold, zli.Underline, zli.Red, zli.Green.Bg())
 
-zli.Colorln("Contrast ratios is for suckers",        // 256 colour
-    zli.Palette(56), zli.Palette(99).Bg())
+zli.Colorln("Contrast ratios is for suckers",         // 256 colour
+    zli.NewColor().From256(56), zli.NewColor().From256(99).Bg())
 
-zli.Colorln("REAL men use TRUE color!",              // True colour
-    zli.TrueColor("#fff"), zli.TrueColor("#00f").Bg())
+zli.Colorln("REAL men use TRUE color!",               // True colour
+    zli.NewColor().FromHex("#fff"), zli.NewColor().FromHex("#00f").Bg())
 ```

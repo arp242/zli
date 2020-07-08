@@ -16,10 +16,10 @@ func ExampleColor() {
 		zli.Bold, zli.Underline, zli.Red, zli.Green.Bg())
 
 	zli.Colorln("Contrast ratios is for suckers", // 256 colour
-		zli.Palette(56), zli.Palette(99).Bg())
+		zli.NewColor().From256(56), zli.NewColor().From256(99).Bg())
 
 	zli.Colorln("REAL men use TRUE color!", // True colour
-		zli.TrueColor("#fff"), zli.TrueColor("#00f").Bg())
+		zli.NewColor().FromHex("#fff"), zli.NewColor().FromHex("#00f").Bg())
 
 	// Output:
 	// [38;5;1mYou're looking rather red[0m
@@ -32,47 +32,47 @@ func ExampleColor() {
 
 func TestColor(t *testing.T) {
 	tests := []struct {
-		in   []zli.Attribute
+		in   []zli.Color
 		want string
 	}{
-		{[]zli.Attribute{}, "Hello"},
-		{[]zli.Attribute{zli.TrueColor("chucknorris")}, "zli.Color!(ERROR n=0)"},
+		{[]zli.Color{}, "Hello"},
+		{[]zli.Color{zli.NewColor().FromHex("chucknorris")}, "zli.Color!(ERROR n=0)"},
 
 		// Test boundaries (first and last).
-		{[]zli.Attribute{zli.Black, zli.Black.Bg()}, "\x1b[38;5;0;48;5;0mHello\x1b[0m"},
-		{[]zli.Attribute{zli.BrightWhite, zli.BrightWhite.Bg()}, "\x1b[38;5;15;48;5;15mHello\x1b[0m"},
-		{[]zli.Attribute{zli.BrightWhite + 1, (zli.BrightWhite + 1).Bg()}, "\x1b[38;5;16;48;5;16mHello\x1b[0m"},
-		{[]zli.Attribute{355, zli.Attribute(355).Bg()}, "\x1b[38;5;255;48;5;255mHello\x1b[0m"},
+		{[]zli.Color{zli.Black, zli.Black.Bg()}, "\x1b[38;5;0;48;5;0mHello\x1b[0m"},
+		{[]zli.Color{zli.BrightWhite, zli.BrightWhite.Bg()}, "\x1b[38;5;15;48;5;15mHello\x1b[0m"},
+		{[]zli.Color{zli.BrightWhite + 1, (zli.BrightWhite + 1).Bg()}, "\x1b[38;5;16;48;5;16mHello\x1b[0m"},
+		{[]zli.Color{355, zli.Color(355).Bg()}, "\x1b[38;5;255;48;5;255mHello\x1b[0m"},
 		{
-			[]zli.Attribute{zli.TrueColor("#000"), zli.TrueColor("#000").Bg()},
+			[]zli.Color{zli.NewColor().FromHex("#000"), zli.NewColor().FromHex("#000").Bg()},
 			"\x1b[38;2;0;0;0;48;2;0;0;0mHello\x1b[0m",
 		},
 		{
-			[]zli.Attribute{zli.TrueColor("#fff"), zli.TrueColor("#fff").Bg()},
+			[]zli.Color{zli.NewColor().FromHex("#fff"), zli.NewColor().FromHex("#fff").Bg()},
 			"\x1b[38;2;255;255;255;48;2;255;255;255mHello\x1b[0m",
 		},
 
-		{[]zli.Attribute{zli.Bold}, "\x1b[1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Bold.Bg()}, "\x1b[1mHello\x1b[0m"}, // Doesn't make much sense, but should work nonetheless.
+		{[]zli.Color{zli.Bold}, "\x1b[1mHello\x1b[0m"},
+		{[]zli.Color{zli.Bold.Bg()}, "\x1b[1mHello\x1b[0m"}, // Doesn't make much sense, but should work nonetheless.
 
-		{[]zli.Attribute{zli.Red}, "\x1b[38;5;1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Bold, zli.Red}, "\x1b[1;38;5;1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Red, zli.Underline}, "\x1b[38;5;1;4mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Green.Bg()}, "\x1b[48;5;2mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Green.Bg(), zli.Bold}, "\x1b[48;5;2;1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Green.Bg(), zli.Red}, "\x1b[48;5;2;38;5;1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}, "\x1b[38;5;2;48;5;1;1;4mHello\x1b[0m"},
+		{[]zli.Color{zli.Red}, "\x1b[38;5;1mHello\x1b[0m"},
+		{[]zli.Color{zli.Bold, zli.Red}, "\x1b[1;38;5;1mHello\x1b[0m"},
+		{[]zli.Color{zli.Red, zli.Underline}, "\x1b[38;5;1;4mHello\x1b[0m"},
+		{[]zli.Color{zli.Green.Bg()}, "\x1b[48;5;2mHello\x1b[0m"},
+		{[]zli.Color{zli.Green.Bg(), zli.Bold}, "\x1b[48;5;2;1mHello\x1b[0m"},
+		{[]zli.Color{zli.Green.Bg(), zli.Red}, "\x1b[48;5;2;38;5;1mHello\x1b[0m"},
+		{[]zli.Color{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}, "\x1b[38;5;2;48;5;1;1;4mHello\x1b[0m"},
 	}
 
 	for _, tt := range tests {
 		zli.NoColor = true
-		got := zli.Color("Hello", tt.in...)
+		got := zli.Colorf("Hello", tt.in...)
 		if got != "Hello" {
 			t.Errorf("NoColor not respected? got: %q", got)
 		}
 
 		zli.NoColor = false
-		got = zli.Color("Hello", tt.in...)
+		got = zli.Colorf("Hello", tt.in...)
 		if got != tt.want {
 			t.Errorf("\ngot:  %q → %[1]s\nwant: %q → %[2]s", got, tt.want)
 		}
@@ -87,12 +87,12 @@ func TestColor(t *testing.T) {
 }
 
 func BenchmarkColor(b *testing.B) {
-	attr := []zli.Attribute{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}
+	attr := []zli.Color{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}
 	var s string
 
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		s = zli.Color("Hello", attr...)
+		s = zli.Colorf("Hello", attr...)
 	}
 	_ = s
 }

@@ -9,15 +9,56 @@ import (
 	"zgo.at/zli/internal/isatty"
 )
 
-// Attribute is an attribute to apply.
-type Attribute int64
+// Color is an attribute to apply.
+type Color int64
 
 // Bg transforms a foreground colour to a background colout.
-func (a Attribute) Bg() Attribute { return -a }
+func (c Color) Bg() Color { return -c }
+
+// From256 gets colour from the fixed 256-colour palette. The first 16 (starting
+// at 0) are the same as the colour names (Black, Red, etc.)
+//
+// 16 to 231 are various colours. 232 to 255 are greyscale tones.
+func (c Color) From256(n int) Color {
+	return Color(n + 100)
+}
+
+// FromHex gets a 24-bit "true colour" from a hex string such as "#f44" or
+// "#ff4444". The leading "#" is optional.
+//
+// Parsing errors are signaled with -0 (signed zero), which Colorf() shows as
+// "zli.Color!(ERROR n=1)", where 1 is the argument index.
+func (c Color) FromHex(hex string) Color {
+	hex = strings.TrimPrefix(hex, "#")
+	if len(hex) == 3 {
+		hex = strings.Repeat(string(hex[0]), 2) +
+			strings.Repeat(string(hex[1]), 2) +
+			strings.Repeat(string(hex[2]), 2)
+	}
+
+	var rgb []byte
+	n, err := fmt.Sscanf(strings.ToLower(hex), "%x", &rgb)
+	if err != nil {
+		return -0
+	}
+	if n != 1 || len(rgb) != 3 { // I don't think this can ever happen.
+		return -0
+	}
+
+	return Color(1000 +
+		int64(rgb[0]) +
+		int64(rgb[1])<<8 +
+		int64(rgb[2])<<16)
+}
+
+// NewColor creates a new uninitialized colour.
+//
+// You usually want to call FromHex() or From256() on the return value.
+func NewColor() Color { return Color(-0) }
 
 // Basic terminal attributes.
 const (
-	Reset Attribute = iota
+	Reset Color = iota
 	Bold
 	Faint
 	Italic
@@ -31,7 +72,7 @@ const (
 
 // First 16 colours.
 const (
-	Black Attribute = iota + 100
+	Black Color = iota + 100
 	Red
 	Green
 	Yellow
@@ -58,49 +99,15 @@ var NoColor = func() bool {
 	return os.Getenv("TERM") == "dumb" || !isatty.IsTerminal(os.Stdout.Fd()) || ok
 }()
 
-// Palette gets colour from the fixed 256-colour palette. The first 16 (starting
-// at 0) are the same as the colour names (Black, Red, etc.)
-//
-// 16 to 231 are various colours. 232 to 255 are greyscale tones.
-func Palette(n int) Attribute { return Attribute(n + 100) }
-
-// TrueColor gets a 24-bit "true colour" from a hex string such as "#f44" or
-// "#ff4444". The leading "#" is optional.
-//
-// Parsing errors are signaled with -0 (signed zero), which Color() shows as
-// "zli.Color!(ERROR n=1)", where 1 is the argument index.
-func TrueColor(hex string) Attribute {
-	hex = strings.TrimPrefix(hex, "#")
-	if len(hex) == 3 {
-		hex = strings.Repeat(string(hex[0]), 2) +
-			strings.Repeat(string(hex[1]), 2) +
-			strings.Repeat(string(hex[2]), 2)
-	}
-
-	var rgb []byte
-	n, err := fmt.Sscanf(strings.ToLower(hex), "%x", &rgb)
-	if err != nil {
-		return -0
-	}
-	if n != 1 || len(rgb) != 3 { // I don't think this can ever happen.
-		return -0
-	}
-
-	return Attribute(1000 +
-		int64(rgb[0]) +
-		int64(rgb[1])<<8 +
-		int64(rgb[2])<<16)
-}
-
 // Colorln prints colourized output.
-func Colorln(text string, attrs ...Attribute) {
-	fmt.Println(Color(text, attrs...))
+func Colorln(text string, attrs ...Color) {
+	fmt.Println(Colorf(text, attrs...))
 }
 
-// Color applies terminal escape codes on the text.
+// Colorf applies terminal escape codes on the text.
 //
 // This will do nothing of NoColor is true.
-func Color(text string, attrs ...Attribute) string {
+func Colorf(text string, attrs ...Color) string {
 	if len(attrs) == 0 || NoColor {
 		return text
 	}
