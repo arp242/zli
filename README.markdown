@@ -104,14 +104,14 @@ user set `--color=force` or something.
 ```go
 zli.Colorln("You're looking rather red", zli.Red)    // Apply a colour.
 zli.Colorln("A bold move", zli.Bold)                 // Or an attribute.
-zli.Colorln("Tomato", zli.Background(zli.Red))       // Apply background colour.
+zli.Colorln("Tomato", zli.Red.Bg())                  // Apply background colour.
 
 zli.Colorln("Wow, such beautiful text",              // Can be combined.
-    zli.Bold, zli.Underline, zli.Red, zli.Background(zli.Green))
+    zli.Bold, zli.Underline, zli.Red, zli.Green.Bg())
 
 zli.Colorln("Contrast ratios is for suckers",        // 256 colour
-    zli.Palette(56), zli.Background(zli.Palette(99)))
+    zli.Palette(56), zli.Palette(99).Bg())
 
 zli.Colorln("REAL men use TRUE color!",              // True colour
-    zli.TrueColor("#fff"), zli.Background(zli.TrueColor("#00f")))
+    zli.TrueColor("#fff"), zli.TrueColor("#00f").Bg())
 ```

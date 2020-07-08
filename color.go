@@ -9,7 +9,11 @@ import (
 	"zgo.at/zli/internal/isatty"
 )
 
+// Attribute is an attribute to apply.
 type Attribute int64
+
+// Bg transforms a foreground colour to a background colout.
+func (a Attribute) Bg() Attribute { return -a }
 
 // Basic terminal attributes.
 const (
@@ -53,9 +57,6 @@ var NoColor = func() bool {
 	_, ok := os.LookupEnv("NO_COLOR")
 	return os.Getenv("TERM") == "dumb" || !isatty.IsTerminal(os.Stdout.Fd()) || ok
 }()
-
-// Background transforms a colour to a background colour.
-func Background(a Attribute) Attribute { return -a }
 
 // Palette gets colour from the fixed 256-colour palette. The first 16 (starting
 // at 0) are the same as the colour names (Black, Red, etc.)

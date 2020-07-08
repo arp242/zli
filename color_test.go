@@ -10,16 +10,16 @@ import (
 func ExampleColor() {
 	zli.Colorln("You're looking rather red", zli.Red) // Apply a colour.
 	zli.Colorln("A bold move", zli.Bold)              // Or an attribute.
-	zli.Colorln("Tomato", zli.Background(zli.Red))    // Transform to background colour.
+	zli.Colorln("Tomato", zli.Red.Bg())               // Transform to background colour.
 
 	zli.Colorln("Wow, such beautiful text", // Can be combined.
-		zli.Bold, zli.Underline, zli.Red, zli.Background(zli.Green))
+		zli.Bold, zli.Underline, zli.Red, zli.Green.Bg())
 
 	zli.Colorln("Contrast ratios is for suckers", // 256 colour
-		zli.Palette(56), zli.Background(zli.Palette(99)))
+		zli.Palette(56), zli.Palette(99).Bg())
 
 	zli.Colorln("REAL men use TRUE color!", // True colour
-		zli.TrueColor("#fff"), zli.Background(zli.TrueColor("#00f")))
+		zli.TrueColor("#fff"), zli.TrueColor("#00f").Bg())
 
 	// Output:
 	// [38;5;1mYou're looking rather red[0m
@@ -39,29 +39,29 @@ func TestColor(t *testing.T) {
 		{[]zli.Attribute{zli.TrueColor("chucknorris")}, "zli.Color!(ERROR n=0)"},
 
 		// Test boundaries (first and last).
-		{[]zli.Attribute{zli.Black, zli.Background(zli.Black)}, "\x1b[38;5;0;48;5;0mHello\x1b[0m"},
-		{[]zli.Attribute{zli.BrightWhite, zli.Background(zli.BrightWhite)}, "\x1b[38;5;15;48;5;15mHello\x1b[0m"},
-		{[]zli.Attribute{zli.BrightWhite + 1, zli.Background(zli.BrightWhite + 1)}, "\x1b[38;5;16;48;5;16mHello\x1b[0m"},
-		{[]zli.Attribute{355, zli.Background(355)}, "\x1b[38;5;255;48;5;255mHello\x1b[0m"},
+		{[]zli.Attribute{zli.Black, zli.Black.Bg()}, "\x1b[38;5;0;48;5;0mHello\x1b[0m"},
+		{[]zli.Attribute{zli.BrightWhite, zli.BrightWhite.Bg()}, "\x1b[38;5;15;48;5;15mHello\x1b[0m"},
+		{[]zli.Attribute{zli.BrightWhite + 1, (zli.BrightWhite + 1).Bg()}, "\x1b[38;5;16;48;5;16mHello\x1b[0m"},
+		{[]zli.Attribute{355, zli.Attribute(355).Bg()}, "\x1b[38;5;255;48;5;255mHello\x1b[0m"},
 		{
-			[]zli.Attribute{zli.TrueColor("#000"), zli.Background(zli.TrueColor("#000"))},
+			[]zli.Attribute{zli.TrueColor("#000"), zli.TrueColor("#000").Bg()},
 			"\x1b[38;2;0;0;0;48;2;0;0;0mHello\x1b[0m",
 		},
 		{
-			[]zli.Attribute{zli.TrueColor("#fff"), zli.Background(zli.TrueColor("#fff"))},
+			[]zli.Attribute{zli.TrueColor("#fff"), zli.TrueColor("#fff").Bg()},
 			"\x1b[38;2;255;255;255;48;2;255;255;255mHello\x1b[0m",
 		},
 
 		{[]zli.Attribute{zli.Bold}, "\x1b[1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Background(zli.Bold)}, "\x1b[1mHello\x1b[0m"}, // Doesn't make much sense, but should work nonetheless.
+		{[]zli.Attribute{zli.Bold.Bg()}, "\x1b[1mHello\x1b[0m"}, // Doesn't make much sense, but should work nonetheless.
 
 		{[]zli.Attribute{zli.Red}, "\x1b[38;5;1mHello\x1b[0m"},
 		{[]zli.Attribute{zli.Bold, zli.Red}, "\x1b[1;38;5;1mHello\x1b[0m"},
 		{[]zli.Attribute{zli.Red, zli.Underline}, "\x1b[38;5;1;4mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Background(zli.Green)}, "\x1b[48;5;2mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Background(zli.Green), zli.Bold}, "\x1b[48;5;2;1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Background(zli.Green), zli.Red}, "\x1b[48;5;2;38;5;1mHello\x1b[0m"},
-		{[]zli.Attribute{zli.Green, zli.Background(zli.Red), zli.Bold, zli.Underline}, "\x1b[38;5;2;48;5;1;1;4mHello\x1b[0m"},
+		{[]zli.Attribute{zli.Green.Bg()}, "\x1b[48;5;2mHello\x1b[0m"},
+		{[]zli.Attribute{zli.Green.Bg(), zli.Bold}, "\x1b[48;5;2;1mHello\x1b[0m"},
+		{[]zli.Attribute{zli.Green.Bg(), zli.Red}, "\x1b[48;5;2;38;5;1mHello\x1b[0m"},
+		{[]zli.Attribute{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}, "\x1b[38;5;2;48;5;1;1;4mHello\x1b[0m"},
 	}
 
 	for _, tt := range tests {
@@ -87,7 +87,7 @@ func TestColor(t *testing.T) {
 }
 
 func BenchmarkColor(b *testing.B) {
-	attr := []zli.Attribute{zli.Green, zli.Background(zli.Red), zli.Bold, zli.Underline}
+	attr := []zli.Attribute{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}
 	var s string
 
 	b.ReportAllocs()

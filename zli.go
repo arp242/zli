@@ -104,36 +104,36 @@ func FileOrInput(path string) (io.ReadCloser, error) {
 	return fp, nil
 }
 
-// Pager pipes the content of out to $PAGER, or prints it to stdout of this
+// Pager pipes the content of text to $PAGER, or prints it to stdout of this
 // fails.
-func Pager(out io.Reader) {
+func Pager(text io.Reader) {
 	if !IsTerminal(os.Stdout.Fd()) {
-		io.Copy(stdout, out)
+		io.Copy(stdout, text)
 		return
 	}
 
 	pager := os.Getenv("PAGER")
 	if pager == "" {
-		io.Copy(stdout, out)
+		io.Copy(stdout, text)
 		return
 	}
 
 	pager, err := exec.LookPath(pager)
 	if err != nil {
 		fmt.Fprintf(stderr, "running $PAGER: %s\n", err)
-		io.Copy(stdout, out)
+		io.Copy(stdout, text)
 		return
 	}
 
 	cmd := exec.Command(pager)
-	cmd.Stdin = out
+	cmd.Stdin = text
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
 	err = cmd.Start()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "running $PAGER: %s\n", err)
-		io.Copy(stdout, out)
+		io.Copy(stdout, text)
 		return
 	}
 
