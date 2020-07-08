@@ -42,12 +42,12 @@ func Program() string {
 	return filepath.Base(os.Args[0])
 }
 
-// Fatal prints the given message to stderr and exits.
+// Error prints an error message to stderr.
 //
-//   Fatal("oh noes: %q", something)   // printf arguments
-//   Fatal(err)                        // Print err.Error()
-//   Fatal(123)                        // Print %v (makes little sense, but okay)
-func Fatal(s interface{}, args ...interface{}) {
+//   Error("oh noes: %q", something)   // printf arguments
+//   Error(err)                        // Print err.Error()
+//   Error(123)                        // Print %v (makes little sense, but okay)
+func Error(s interface{}, args ...interface{}) {
 	prog := Program()
 	if prog != "" {
 		prog += ": "
@@ -69,6 +69,11 @@ func Fatal(s interface{}, args ...interface{}) {
 			fmt.Fprintf(stderr, prog+"%v\n", ss)
 		}
 	}
+}
+
+// Fatal prints the given message to stderr with Error() and exits.
+func Fatal(s interface{}, args ...interface{}) {
+	Error(s, args...)
 	exit(1)
 }
 
@@ -86,7 +91,7 @@ func F(err error) {
 func FileOrInput(path string) (io.ReadCloser, error) {
 	if path == "" || path == "-" {
 		if IsTerminal(os.Stdin.Fd()) {
-			fmt.Fprintf(stderr, "  %s: reading from stdin...\r", filepath.Base(os.Args[0]))
+			fmt.Fprintf(stderr, "  %s: reading from stdin...\r", Program())
 			os.Stderr.Sync()
 		}
 		return ioutil.NopCloser(stdin), nil
