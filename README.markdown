@@ -1,7 +1,8 @@
-zli is a library for writing CLI programs. It includes flag parsing, colour
+zli is a Go library for writing CLI programs. It includes flag parsing, colour
 escape codes, and various helpful utility functions.
 
-[GoDoc](https://pkg.go.dev/zgo.at/zli)
+Import a `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
+
 
 ### Utility functions
 
@@ -9,19 +10,19 @@ escape codes, and various helpful utility functions.
 // Show error on stderr.
 zli.Error("oh noes: %q", "data")       // progname: oh noes: "data"
 
-// Quick exit with nice message to stderr, just Error() followed by exit().
+// Quick exit with nice message to stderr (Error() followed by exit).
 zli.Fatal(errors.New("yikes"))         // progname: yikes
 
 // Shorter version which won't do anything of the error is nil.
 zli.F(errors.New("yikes"))             // progname: yikes
 
 // Read from stdin or a file
-fp, err := zli.FileOrInput("")         // from stdin; can also use "-"
-defer fp.Close()                       // No-op close on stdin.
-
 fp, err := zli.FileOrInput("/a-file")  // Read from file.
 
-// Display in $PAGER.
+fp, err := zli.FileOrInput("-")        // from stdin; can also use ""
+defer fp.Close()                       // No-op close on stdin.
+
+// Display contents of a reader in $PAGER.
 fp, _ := os.Open("/file")
 zli.Pager(fp)
 
@@ -30,6 +31,7 @@ width, height, err := zli.TerminalSize(os.Stdout.Fd())
 interactive := zli.IsTerminal(os.Stdout.Fd())
 ```
 
+
 ### Flag parsing
 
 zli comes with a simple no-nonsense flag parser which, IMHO, gives a better
@@ -37,7 +39,7 @@ experience than Go's `flag` package. See [flag.markdown](/flag.markdown) for
 some rationale on "why this and not stdlib flags?"
 
 ```go
-// Create new flags from os.Args.
+// Create new flags; normally you'd pass in os.Args here.
 f := zli.NewFlags([]string{"example", "-vv", "-f=csv", "-a", "xx", "yy"})
 
 // Add a string, bool, and "counter" flag.
@@ -47,15 +49,14 @@ var (
     format  = f.String("", "f", "format")
 )
 
-// Shift the first argument (i.e. os.Args[1], if any, empty string if there
-// isn't). Useful to get the "subcommand" name. This works before and after
-// Parse().
+// Shift the first argument (i.e. os.Args[1]). Useful to get the "subcommand"
+// name. This works before and after Parse().
 switch f.Shift() {
 case "help":
     // Run help
 case "install":
     // Run install
-case "":
+case "": // os.Args wasn't long enough.
     // Error: need a command (or just print the usage)
 default:
     // Error: Unknown command
@@ -68,7 +69,7 @@ if err != nil {
 }
 
 // You can check if the flag was present on the CLI with Set(). This way you can
-// distinish between "was an empty value passed" // (-format '') and "this flag
+// distinguish between "was an empty value passed" (-format '') and "this flag
 // wasn't on the CLI".
 if format.Set() {
     fmt.Println("Format was set to", format.String())
@@ -90,6 +91,7 @@ fmt.Println("Remaining:", f.Args)
 
 ### Colours
 
+
 You can add colours and some othe text attributes to a string with
 `zli.Color()`, which returns a modified string with the terminal escape codes.
 
@@ -97,10 +99,12 @@ It won't do anything if `zli.NoColor` is set; this is set automatically if the
 output isn't a terminal or if `NO_COLOR` is set, but you can overide it if the
 user set `--color=force` or something.
 
+`zli.Colorln()` is a convenience wrapped for `fmt.Println(zli.Color(...))`.
+
 ```go
 zli.Colorln("You're looking rather red", zli.Red)    // Apply a colour.
 zli.Colorln("A bold move", zli.Bold)                 // Or an attribute.
-zli.Colorln("Tomato", zli.Background(zli.Red))       // Transform to background colour.
+zli.Colorln("Tomato", zli.Background(zli.Red))       // Apply background colour.
 
 zli.Colorln("Wow, such beautiful text",              // Can be combined.
     zli.Bold, zli.Underline, zli.Red, zli.Background(zli.Green))
