@@ -1,4 +1,5 @@
-Some common functions for writing CLI programs.
+zli is a library for writing CLI programs. It includes flag parsing, colour
+escape codes, and various helpful utility functions.
 
 [GoDoc](https://pkg.go.dev/zgo.at/zli)
 
@@ -85,4 +86,28 @@ fmt.Println("All:", all.Bool())
 
 // f.Args is set to everything that's not a flag or argument.
 fmt.Println("Remaining:", f.Args)
+```
+
+### Colours
+
+You can add colours and some othe text attributes to a string with
+`zli.Color()`, which returns a modified string with the terminal escape codes.
+
+It won't do anything if `zli.NoColor` is set; this is set automatically if the
+output isn't a terminal or if `NO_COLOR` is set, but you can overide it if the
+user set `--color=force` or something.
+
+```go
+zli.Colorln("You're looking rather red", zli.Red)    // Apply a colour.
+zli.Colorln("A bold move", zli.Bold)                 // Or an attribute.
+zli.Colorln("Tomato", zli.Background(zli.Red))       // Transform to background colour.
+
+zli.Colorln("Wow, such beautiful text",              // Can be combined.
+    zli.Bold, zli.Underline, zli.Red, zli.Background(zli.Green))
+
+zli.Colorln("Contrast ratios is for suckers",        // 256 colour
+    zli.Palette(56), zli.Background(zli.Palette(99)))
+
+zli.Colorln("REAL men use TRUE color!",              // True colour
+    zli.TrueColor("#fff"), zli.Background(zli.TrueColor("#00f")))
 ```
