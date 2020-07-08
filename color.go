@@ -90,13 +90,17 @@ const (
 	BrightWhite
 )
 
-// NoColor indicates that the program shouldn't output any colours, based on
-// thet output terminal and NO_COLOR environment variable.
+// WantColor indicates if the program should output any colours. This is
+// automatically set from from the output terminal and NO_COLOR environment
+// variable.
 //
 // You can override this if the user sets "--color=force" or the like.
-var NoColor = func() bool {
+//
+// TODO: maybe expand this a bit with WantMonochrome or some such, so you can
+// still output bold/underline/reverse text for people who don't want colours.
+var WantColor = func() bool {
 	_, ok := os.LookupEnv("NO_COLOR")
-	return os.Getenv("TERM") == "dumb" || !isatty.IsTerminal(os.Stdout.Fd()) || ok
+	return os.Getenv("TERM") != "dumb" && isatty.IsTerminal(os.Stdout.Fd()) && !ok
 }()
 
 // Colorln prints colourized output.
@@ -106,9 +110,9 @@ func Colorln(text string, attrs ...Color) {
 
 // Colorf applies terminal escape codes on the text.
 //
-// This will do nothing of NoColor is true.
+// This will do nothing of WantColor is true.
 func Colorf(text string, attrs ...Color) string {
-	if len(attrs) == 0 || NoColor {
+	if len(attrs) == 0 || !WantColor {
 		return text
 	}
 

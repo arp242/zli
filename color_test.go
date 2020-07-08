@@ -65,13 +65,13 @@ func TestColor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		zli.NoColor = true
+		zli.WantColor = true
 		got := zli.Colorf("Hello", tt.in...)
 		if got != "Hello" {
-			t.Errorf("NoColor not respected? got: %q", got)
+			t.Errorf("WantColor not respected? got: %q", got)
 		}
 
-		zli.NoColor = false
+		zli.WantColor = false
 		got = zli.Colorf("Hello", tt.in...)
 		if got != tt.want {
 			t.Errorf("\ngot:  %q → %[1]s\nwant: %q → %[2]s", got, tt.want)

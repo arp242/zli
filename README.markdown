@@ -92,12 +92,12 @@ fmt.Println("Remaining:", f.Args)
 ### Colours
 
 
-You can add colours and some othe text attributes to a string with
+You can add colours and some other text attributes to a string with
 `zli.Color()`, which returns a modified string with the terminal escape codes.
 
-It won't do anything if `zli.NoColor` is set; this is set automatically if the
-output isn't a terminal or if `NO_COLOR` is set, but you can overide it if the
-user set `--color=force` or something.
+It won't do anything if `zli.WantColor` is `false`; this is set automatically
+disabled if the output isn't a terminal or `NO_COLOR` is set, but you can
+override it if the user set `--color=force` or something.
 
 `zli.Colorln()` is a convenience wrapped for `fmt.Println(zli.Color(...))`.
 
