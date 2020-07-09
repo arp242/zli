@@ -65,13 +65,13 @@ func TestColor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		zli.WantColor = true
+		zli.WantColor = false
 		got := zli.Colorf("Hello", tt.in...)
 		if got != "Hello" {
 			t.Errorf("WantColor not respected? got: %q", got)
 		}
 
-		zli.WantColor = false
+		zli.WantColor = true
 		got = zli.Colorf("Hello", tt.in...)
 		if got != tt.want {
 			t.Errorf("\ngot:  %q → %[1]s\nwant: %q → %[2]s", got, tt.want)
@@ -86,6 +86,7 @@ func TestColor(t *testing.T) {
 	}
 }
 
+// BenchmarkColor-2         3248737               367 ns/op              88 B/op          4 allocs/op
 func BenchmarkColor(b *testing.B) {
 	attr := []zli.Color{zli.Green, zli.Red.Bg(), zli.Bold, zli.Underline}
 	var s string

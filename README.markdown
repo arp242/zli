@@ -3,32 +3,26 @@ escape codes, and various helpful utility functions.
 
 Import a `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
 
+There's a little example at [example/grep.go](example/grep.go), which should
+give a decent overview of how actual programs look like.
+
 
 ### Utility functions
 
 ```go
-// Show error on stderr.
-zli.Error("oh noes: %q", "data")       // progname: oh noes: "data"
+zli.Error("oh noes: %s", "u brok it")  // Prints to stderr: "progname: oh noes: u brok it"
+zli.Fatal(errors.New("yikes"))         // Like Error() but exits: "progname: yikes"
+zli.F(errors.New("yikes"))             // Shorter version which checks if err is nil first.
 
-// Quick exit with nice message to stderr (Error() followed by exit).
-zli.Fatal(errors.New("yikes"))         // progname: yikes
-
-// Shorter version which won't do anything of the error is nil.
-zli.F(errors.New("yikes"))             // progname: yikes
-
-// Read from stdin or a file
-fp, err := zli.FileOrInput("/a-file")  // Read from file.
-
-fp, err := zli.FileOrInput("-")        // from stdin; can also use ""
+fp, err := zli.FileOrInput("/a-file")  // Read data from a file...
+fp, err := zli.FileOrInput("-")        // ...or read from stdin; can also use "" for stdin
 defer fp.Close()                       // No-op close on stdin.
 
-// Display contents of a reader in $PAGER.
-fp, _ := os.Open("/file")
+fp, _ := os.Open("/file")              // Display contents of a reader in $PAGER.
 zli.Pager(fp)
 
-// Get terminal size, check if stdout is a terminal.
-width, height, err := zli.TerminalSize(os.Stdout.Fd())
-interactive := zli.IsTerminal(os.Stdout.Fd())
+w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
+interactive := zli.IsTerminal(os.Stdout.Fd())  // Check if stdout is a terminal.
 ```
 
 
@@ -90,7 +84,6 @@ fmt.Println("Remaining:", f.Args)
 ```
 
 ### Colours
-
 
 You can add colours and some other text attributes to a string with
 `zli.Colorf()`, which returns a modified string with the terminal escape codes.

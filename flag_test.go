@@ -40,9 +40,9 @@ func ExampleFlags() {
 		// Print error, usage.
 	}
 
-	// You can check if the flag was present on the CLI with Set(). This way you can
-	// distinish between "was an empty value passed" // (-format '') and "this flag
-	// wasn't on the CLI".
+	// You can check if the flag was present on the CLI with Set(). This way you
+	// can distinguish between "was an empty value passed" // (-format '') and
+	// "this flag wasn't on the CLI".
 	if format.Set() {
 		fmt.Println("Format was set to", format.String())
 	}

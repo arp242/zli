@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"zgo.at/zli/internal/isatty"
 	"zgo.at/zli/internal/terminal"
@@ -118,6 +119,12 @@ func Pager(text io.Reader) {
 		return
 	}
 
+	var args []string
+	if i := strings.IndexByte(pager, ' '); i > -1 {
+		args = strings.Split(pager[i+1:], " ")
+		pager = pager[:i]
+	}
+
 	pager, err := exec.LookPath(pager)
 	if err != nil {
 		fmt.Fprintf(stderr, "running $PAGER: %s\n", err)
@@ -125,7 +132,7 @@ func Pager(text io.Reader) {
 		return
 	}
 
-	cmd := exec.Command(pager)
+	cmd := exec.Command(pager, args...)
 	cmd.Stdin = text
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
