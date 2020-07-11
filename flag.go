@@ -25,18 +25,18 @@ const (
 	// They must be at the start of the line and end with a :
 	UsageHeaders = 2
 
-	// UsageHighlightFlags formats flags in the form of:
+	// UsageFlags formats flags in the form of:
 	//
 	//   -f
 	//   -flag
 	//   -flag=foo
 	//   -flag=[foo]
-	UsageHighlightFlags = 4
+	UsageFlags = 4
 )
 
 var (
-	reHeader = regexp.MustCompile(`^[\w ]+:$`)
-	reFlags  = regexp.MustCompile(`--?[a-z-]+(\[?=[a-z-]+\]?)?\b`)
+	reHeader = regexp.MustCompile(`^\w[\w -]+:$`)
+	reFlags  = regexp.MustCompile(`\B-{1,2}[a-z0-9=-]+\b`)
 )
 
 // Usage applies some formatting to a usage message. See the Usage* constants.
@@ -55,7 +55,7 @@ func Usage(opts int, text string) string {
 		text = strings.Join(split, "\n")
 	}
 
-	if opts&UsageHighlightFlags != 0 {
+	if opts&UsageFlags != 0 {
 		text = reFlags.ReplaceAllString(text, Colorf(`$0`, Underline))
 	}
 

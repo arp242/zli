@@ -21,7 +21,7 @@ import (
 // substitutions; here it applies some formatting to the headers ("Usage:",
 // "Description:", etc.) and the flags ("-p", "-only-matching", etc.) which
 // makes it look a bit nicer and somewhat reminiscent of manpages.
-var usage = zli.Usage(zli.UsageTrim|zli.UsageHeaders|zli.UsageHighlightFlags, `
+var usage = zli.Usage(zli.UsageTrim|zli.UsageHeaders|zli.UsageFlags, `
 Usage:
     grep [options..] pattern [file..]
 
