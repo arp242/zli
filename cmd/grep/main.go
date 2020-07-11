@@ -1,5 +1,4 @@
-// A simple grep, for demo purposes.
-
+// Command grep is a simple grep implementation for demo purposes.
 package main
 
 import (
@@ -42,7 +41,7 @@ Options:
         Don't show any output, exit with 0 on the first match found.
 
     -color=when, --color=when
-        When to display colours: auto (default), never, or always.
+        When to display colors: auto (default), never, or always.
 
 	-p, -no-pager
 		Don't pipe the output to $PAGER.
@@ -51,11 +50,11 @@ Exit code:
     0 if a pattern is found, 1 if nothing is found, 2 if there was an error.
 `)
 
-// Define some colours we'll use later on.
-var (
+// Define some colors we'll use later on.
+const (
 	colorMatch  = zli.Red
 	colorLineNr = zli.Magenta
-	colorPath   = []zli.Color{zli.Bold, zli.Underline}
+	colorPath   = zli.Bold | zli.Underline
 )
 
 func main() {
@@ -110,7 +109,7 @@ func main() {
 	exit := 1 // Nothing selected is exit 1
 	for _, path := range f.Args {
 		// Read either the file or stdin (if "" or "-").
-		fp, err := zli.FileOrInput(path)
+		fp, err := zli.FileOrInput(path, false)
 		zli.F(err)
 		defer fp.Close()
 
@@ -137,8 +136,8 @@ func main() {
 			}
 			exit = 0
 
-			// Apply the colour highlighting for the matches, loop over the
-			// matches in reverse order so the inserted colour codes for the
+			// Apply the color highlighting for the matches, loop over the
+			// matches in reverse order so the inserted color codes for the
 			// first match won't affect the string indexing for the second
 			// match.
 			for i := len(match) - 1; i >= 0; i-- {
@@ -155,7 +154,7 @@ func main() {
 				fmt.Fprint(out, path, ":")
 			} else if !shownPath {
 				// Print file path as a header once on interactive terminals.
-				fmt.Fprintln(out, zli.Colorf(path, colorPath...))
+				fmt.Fprintln(out, zli.Colorf(path, colorPath))
 				shownPath = true
 			}
 			fmt.Fprintln(out, zli.Colorf(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)

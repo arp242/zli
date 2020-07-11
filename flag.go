@@ -49,7 +49,7 @@ func Usage(opts int, text string) string {
 		split := strings.Split(text, "\n")
 		for i := range split {
 			if reHeader.MatchString(split[i]) {
-				split[i] = Colorf(split[i], Bold, Underline)
+				split[i] = Colorf(split[i], Bold|Underline)
 			}
 		}
 		text = strings.Join(split, "\n")

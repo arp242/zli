@@ -1,10 +1,15 @@
-zli is a Go library for writing CLI programs. It includes flag parsing, colour
+zli is a Go library for writing CLI programs. It includes flag parsing, color
 escape codes, and various helpful utility functions.
 
 Import a `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
 
-There's a little example at [example/grep.go](example/grep.go), which should
+There's a little example at [cmd/grep/main.go](cmd/grep/main.go), which should
 give a decent overview of how actual programs look like.
+
+Readme index:
+[Utility functions](#utility-functions) ·
+[Flag parsing](#flag-parsing) ·
+[Colors](#colors)
 
 
 ### Utility functions
@@ -83,9 +88,9 @@ fmt.Println("All:", all.Bool())
 fmt.Println("Remaining:", f.Args)
 ```
 
-### Colours
+### Colors
 
-You can add colours and some other text attributes to a string with
+You can add colors and some other text attributes to a string with
 `zli.Colorf()`, which returns a modified string with the terminal escape codes.
 
 It won't do anything if `zli.WantColor` is `false`; this is set automatically
@@ -95,16 +100,25 @@ override it if the user set `--color=force` or something.
 `zli.Colorln()` is a convenience wrapper for `fmt.Println(zli.Colorf(..))`.
 
 ```go
-zli.Colorln("You're looking rather red", zli.Red)     // Apply a colour.
+zli.Colorln("You're looking rather red", zli.Red)     // Apply a color.
 zli.Colorln("A bold move", zli.Bold)                  // Or an attribute.
-zli.Colorln("Tomato", zli.Red.Bg())                   // Transform to background colour.
+zli.Colorln("Tomato", zli.Red.Bg())                   // Transform to background color.
 
 zli.Colorln("Wow, such beautiful text",               // Can be combined.
-    zli.Bold, zli.Underline, zli.Red, zli.Green.Bg())
+    zli.Bold|zli.Underline|zli.Red|zli.Green.Bg())
 
-zli.Colorln("Contrast ratios is for suckers",         // 256 colour
-    zli.NewColor().From256(56), zli.NewColor().From256(99).Bg())
+zli.Colorln("Contrast ratios is for suckers",         // 256 color.
+    zli.Color256(56)|zli.Color256(99).Bg())
 
-zli.Colorln("REAL men use TRUE color!",               // True colour
-    zli.NewColor().FromHex("#fff"), zli.NewColor().FromHex("#00f").Bg())
+zli.Colorln("REAL men use TRUE color!",               // True color.
+    zli.ColorHex("#fff"), zli.ColorHex("#00f").Bg())
+
+// Any combination can be used; the way this works is that the various
+// attributes are keps in different bit flags in Color (uint64), so it's easy to
+// use a single constant to represent it.
+zli.Colorln("Combine as you want",
+    zli.Bold|zli.Underline|zli.Red|zli.ColorHex("#0f0").Bg())
 ```
+
+See [cmd/colortest/main.go](cmd/colortest/main.go) for a little program to
+display and test colors.
