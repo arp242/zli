@@ -26,6 +26,9 @@ The Go standard package has some annoying properties:
 - `flag.StringVar(&s, ..)` requires declaring the variable first, and `s :=
   flag.String(..)` means having pointers everywhere. Neither is great IMO.
 
+- `prog -ab` is interpreted as a single flag, instead of `prog -a -b`. This is
+  not fixed in this package either (yet).
+
 I looked at some existing libraries and there were always some things to my
 dislike.
 

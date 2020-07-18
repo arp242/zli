@@ -29,12 +29,12 @@ func TestFatal(t *testing.T) {
 		{mail.Address{Name: "asd", Address: "qwe"}, []interface{}{"data", 666}, "zli.test: {asd qwe} [data 666]\n"},
 	}
 
-	exit = func(int) {}
+	Exit = func(int) {}
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			buf := new(bytes.Buffer)
-			stderr = buf
+			Stderr = buf
 			Fatal(tt.in, tt.args...)
 
 			got := buf.String()

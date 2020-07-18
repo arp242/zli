@@ -62,6 +62,11 @@ func Usage(opts int, text string) string {
 	return text
 }
 
+// ErrUnknownFlag is used when the flag parsing encounters unknown flags.
+type ErrUnknownFlag struct{ flag string }
+
+func (e ErrUnknownFlag) Error() string { return fmt.Sprintf("unknown flag: %q", e.flag) }
+
 type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
@@ -119,7 +124,7 @@ func (f *Flags) Parse() error {
 
 		flag, ok := f.match(a)
 		if !ok {
-			return fmt.Errorf("unknown flag: %q", a)
+			return &ErrUnknownFlag{flag: a}
 		}
 
 		var err error
