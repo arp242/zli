@@ -4,14 +4,14 @@ The Go standard package has some annoying properties:
 
 - It stops parsing flags at the first non-flag argument:
 
-     prog -v test     Works as expected
-     prog test -v     Stops parsing at "test" and "-v" is added to flag.Args()
+      prog -v test     Works as expected
+      prog test -v     Stops parsing at "test" and "-v" is added to flag.Args()
 
-  I don't really like that. If I write "foo bar" then I want to be able to
-  quickly add "-v" as "foo bar -v" without having to edit the commandline to put
-  it as "foo -v bar".
+  I don't really like that. If I write `foo bar` then I want to be able to
+  quickly add `-v` as `foo bar -v` without having to edit the commandline to put
+  it as `foo -v bar`.
 
-  You can still use "--" if you want to stop flag parsing: "foo -- bar -v".
+  You can still use `--` if you want to stop flag parsing: `foo -- bar -v`.
 
 - Awkward to see if a flag wasn't given at all vs. whether someone passed an
   empty string. This is useful sometimes.
@@ -20,16 +20,19 @@ The Go standard package has some annoying properties:
   prints to stderr even when it really shouldn't (this is fixable, but many
   people don't).
 
-- Awkward to add flag aliases (e.g. have both "-v" and "-verbose"), or to use
+- Awkward to add flag aliases (e.g. have both `-v` and `-verbose`), or to use
   the "-v for verbose, -vv for more verbose"-pattern.
 
 - `flag.StringVar(&s, ..)` requires declaring the variable first, and `s :=
   flag.String(..)` means having pointers everywhere. Neither is great IMO.
 
 I looked at some existing libraries and there were always some things to my
-dislike. Note that the below isn't a full review, just a very short "why not?"
-list (most of these packages are really not bad at all, I've used several of
-them with great success, and all of them also cover more use cases):
+dislike.
+
+Note that the below isn't a full review, just a very short "why not?" list. Most
+of these packages are really not bad at all and I've used several of them with
+great success, and all of them also cover more use cases. Please don't take it
+as a "this sucks"-list.
 
 - https://github.com/jessevdk/go-flags<br>
   Struct tag misuse, seems pretty complex.
