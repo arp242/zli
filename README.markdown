@@ -1,15 +1,15 @@
 zli is a Go library for writing CLI programs. It includes flag parsing, color
-escape codes, and various helpful utility functions.
+escape codes, and various helpful utility functions. There's a little example at
+[cmd/grep/main.go](cmd/grep/main.go), which should give a decent overview of how
+actual programs look like.
 
-Import a `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
-
-There's a little example at [cmd/grep/main.go](cmd/grep/main.go), which should
-give a decent overview of how actual programs look like.
+Import as `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
 
 Readme index:
 [Utility functions](#utility-functions) ·
 [Flag parsing](#flag-parsing) ·
-[Colors](#colors)
+[Colours](#colours) ·
+[Testing](#testing)
 
 
 ### Utility functions
@@ -122,3 +122,153 @@ zli.Colorln("Combine as you want",
 
 See [cmd/colortest/main.go](cmd/colortest/main.go) for a little program to
 display and test colors.
+
+
+### Testing
+
+#### Output and input
+
+All the zli functions use `zli.Stdout`, `zli.Stderr`, `zli.Stdin`, and
+`zli.Exit`, which are set to the corresponding `os.*` default and can be
+overridden for testing.
+
+For example to test `zli.Error()`:
+
+```go
+buf := new(bytes.Buffer)
+Stderr = buf
+defer func() { Stderr = os.Stderr }()
+
+Error("oh noes!")
+out := buf.String()
+fmt.Printf("buffer has: %q\n", out) // buffer has: "zli.test: oh noes!\n"
+```
+
+You can (and probably should) use these in your own programs too if you want to
+test the output:
+
+```go
+fmt.Println("out")                // Hard to test.
+fmt.Fprintln(zli.Stdout, "out")   // Can be tested by swapping out zli.Stdout
+```
+
+You can test stdin as well:
+
+```go
+Stdin = strings.NewReader("hello")
+defer func() { Stdin = os.Stdin }()
+
+fp, err := InputOrFile("-", true)
+```
+
+#### Exit
+
+`os.Exit()` will terminate the entire program, including the text, which is
+rarely what you want and difficult to test. You can replace `zli.Exit` with
+something like:
+
+```go
+var code int
+zli.Exit = func(c int) { code = c }
+mayExit()
+fmt.Println("exit code", code)
+```
+
+This works well enough for simple approaches, but there's a big caveat with
+this; for example consider:
+
+```go
+func mayExit() {
+    err := f()
+    if err != nil {
+        zli.Error(err)
+        zli.Exit(4)
+    }
+
+    fmt.Println("X")
+}
+```
+
+With the above testing substitution the program will continue after zli.Exit()`;
+which is a different program flow from normal execution. A simpel way to fix it
+so to modify the function to explicitly call `return`:
+
+```go
+func mayExit() {
+    err := f()
+    if err != nil {
+        zli.Error(err)
+        zli.Exit(4)
+        return
+    }
+
+    fmt.Println("X")
+}
+```
+
+This still isn't *quite* the same, as callers of `mayExit()` in your program
+will still continue happily. It's also rather ugly and clunky.
+
+To solve this you can replace `zli.Exit` with a function that panics and then
+recover that:
+
+
+func TestFoo(t *testing.T) {
+    var code int
+    zli.Exit = func(c int) {
+        code = c
+        panic("zli.Exit")
+    }
+
+    func() {
+        defer func() {
+            r := recover()
+            if r == nil {
+                return
+            }
+        }()
+
+        mayExit()
+    }()
+
+    fmt.Println("Exited with", code)
+}
+```
+
+This will abort the program flow similar to `os.Exit()`, and the call to
+`mayExit` is wrapped in a function the test function itself will continue after
+the recover.
+
+#### zli.Test()
+
+To make all of the above easier there are a few helper functions:
+
+    zli.TestExit()    zli.Exit replacement.
+    zli.Test()        Replace all of Stdin, Stdout, Stderr, and Exit in one go.
+
+```go
+func TestX(t *testing.T) {
+	exit, in, out, reset := Test()
+	defer reset()
+
+	Error("oh noes!")
+    fmt.Println(out.String()) // zli.test: oh noes!
+
+	in.WriteString("Hello")
+	fp, _ := InputOrFile("-", true)
+	got, _ := ioutil.ReadAll(fp)
+    fmt.Println(string(got)) // Hello
+
+	out.Reset()
+
+	et := func() {
+		fmt.Fprintln(Stdout, "ET START")
+		Exit(1)
+		fmt.Fprintln(Stdout, "ET END")
+	}
+	func() {
+		defer exit.Recover()
+		et()
+	}()
+    fmt.Println("Exit %d: %s\n", *exit, out.String()) // Exit 1: ET START
+```

@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/mail"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -43,4 +47,66 @@ func TestFatal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInputOrFile(t *testing.T) {
+	tests := []struct {
+		in            string
+		stdin         io.Reader
+		want, wantErr string
+	}{
+		{"/nonexistent", nil, "", "no such file or directory"},
+		{"zli_test.go", strings.NewReader("xx"), "package zli", ""},
+		{"-", strings.NewReader("xx yy\nzz"), "xx yy\nzz", ""},
+		{"", strings.NewReader("xx yy\nzz"), "xx yy\nzz", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			Stdin = tt.stdin
+			defer func() { Stdin = os.Stdin }()
+
+			fp, err := InputOrFile(tt.in, true)
+			if !errorContains(err, tt.wantErr) {
+				t.Errorf("wrong error\ngot:  %s\nwant: %s", err, tt.wantErr)
+			}
+
+			// No need to test the test if there's an error.
+			if err != nil {
+				return
+			}
+
+			if fp == nil {
+				t.Fatal("fp is nil")
+			}
+
+			got, err := ioutil.ReadAll(fp)
+			if err != nil {
+				t.Errorf("error reading fp: %s", err)
+			}
+
+			err = fp.Close()
+			if err != nil {
+				t.Errorf("error closing fp: %s", err)
+			}
+
+			g := string(got)
+			if len(g) > len(tt.want) {
+				g = g[:len(tt.want)]
+			}
+			if !strings.HasPrefix(g, tt.want) {
+				t.Errorf("wrong output\ngot:  %q\nwant: %q", g, tt.want)
+			}
+		})
+	}
+}
+
+func errorContains(out error, want string) bool {
+	if out == nil {
+		return want == ""
+	}
+	if want == "" {
+		return false
+	}
+	return strings.Contains(out.Error(), want)
 }

@@ -14,27 +14,18 @@ import (
 	"zgo.at/zli/internal/terminal"
 )
 
-type in interface {
-	io.Reader
-	Fd() uintptr
-}
-
 var (
 	Exit   func(int) = os.Exit
-	Stdin  in        = os.Stdin
+	Stdin  io.Reader = os.Stdin
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 )
 
 // IsTerminal reports if this file descriptor is an interactive terminal.
-func IsTerminal(fd uintptr) bool {
-	return isatty.IsTerminal(fd)
-}
+func IsTerminal(fd uintptr) bool { return isatty.IsTerminal(fd) }
 
 // TerminalSize gets the dimensions of the given terminal.
-func TerminalSize(fd uintptr) (width, height int, err error) {
-	return terminal.GetSize(int(fd))
-}
+func TerminalSize(fd uintptr) (width, height int, err error) { return terminal.GetSize(int(fd)) }
 
 // Program gets the program name from argv.
 func Program() string {
@@ -96,15 +87,19 @@ func F(err error) {
 	}
 }
 
-// FileOrInput will return a reader connected to stdin if path is "" or "-", or
-// open a path.
+// InputOrFile will return a reader connected to stdin if path is "" or "-", or
+// open a path for any other value.
 //
 // It will print a message to stderr notifying the user it's reading from stdin
 // if the terminal is interactive and quiet is false.
 // See: https://www.arp242.net/read-stdin.html
-func FileOrInput(path string, quiet bool) (io.ReadCloser, error) {
+func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 	if path != "" && path != "-" {
-		return os.Open(path)
+		fp, err := os.Open(path)
+		if err != nil {
+			err = fmt.Errorf("zli.InputOrFile: %w", err)
+		}
+		return fp, err
 	}
 
 	if !quiet && IsTerminal(os.Stdin.Fd()) {
@@ -114,8 +109,8 @@ func FileOrInput(path string, quiet bool) (io.ReadCloser, error) {
 	return ioutil.NopCloser(Stdin), nil
 }
 
-// ArgsOrInput returns args unmodified if the len is 1 or higher, or reads
-// arguments from stdin if it's empty.
+// InputOrArgs reads arguments separated by sep from stdin if args is empty, or
+// returns args unmodified if it's not.
 //
 // The argument are split on newline; the following are all identical:
 //
@@ -128,7 +123,7 @@ func FileOrInput(path string, quiet bool) (io.ReadCloser, error) {
 // It will print a message to stderr notifying the user it's reading from stdin
 // if the terminal is interactive and quiet is false.
 // See: https://www.arp242.net/read-stdin.html
-func ArgsOrInput(args []string, quiet bool) ([]string, error) {
+func InputOrArgs(args []string, quiet bool) ([]string, error) {
 	if len(args) > 0 {
 		return args, nil
 	}
@@ -141,7 +136,7 @@ func ArgsOrInput(args []string, quiet bool) ([]string, error) {
 	}
 	in, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		return nil, fmt.Errorf("zli.ArgsOrInput: read stdin: %w", err)
+		return nil, fmt.Errorf("zli.InputOrArgs: read stdin: %w", err)
 	}
 	if !quiet && interactive {
 		fmt.Fprintf(Stderr, "\r")
