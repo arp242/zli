@@ -93,7 +93,7 @@ func main() {
 	re, err := regexp.Compile(patt)
 	zli.F(err)
 
-	// No File arguments? Read from stdin, FileOrInput() will take care of that.
+	// No File arguments? Read from stdin, InputOrFile() will take care of that.
 	if len(f.Args) == 0 {
 		f.Args = []string{"-"}
 	}
@@ -109,7 +109,7 @@ func main() {
 	exit := 1 // Nothing selected is exit 1
 	for _, path := range f.Args {
 		// Read either the file or stdin (if "" or "-").
-		fp, err := zli.FileOrInput(path, false)
+		fp, err := zli.InputOrFile(path, false)
 		zli.F(err)
 		defer fp.Close()
 

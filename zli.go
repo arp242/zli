@@ -123,7 +123,7 @@ func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 // It will print a message to stderr notifying the user it's reading from stdin
 // if the terminal is interactive and quiet is false.
 // See: https://www.arp242.net/read-stdin.html
-func InputOrArgs(args []string, quiet bool) ([]string, error) {
+func InputOrArgs(args []string, sep string, quiet bool) ([]string, error) {
 	if len(args) > 0 {
 		return args, nil
 	}
@@ -134,7 +134,7 @@ func InputOrArgs(args []string, quiet bool) ([]string, error) {
 		fmt.Fprintf(Stderr, "%s: reading from stdin...", Program())
 		os.Stderr.Sync()
 	}
-	in, err := ioutil.ReadAll(os.Stdin)
+	in, err := ioutil.ReadAll(Stdin)
 	if err != nil {
 		return nil, fmt.Errorf("zli.InputOrArgs: read stdin: %w", err)
 	}
@@ -142,13 +142,10 @@ func InputOrArgs(args []string, quiet bool) ([]string, error) {
 		fmt.Fprintf(Stderr, "\r")
 	}
 
-	//for _, l := range strings.Split(strings.TrimRight(string(stdin), "\n"), "\n") {
-	//	args = append(args, strings.Split(l, " ")...)
-	//}
-
-	//return strings.Fields(string(bytes.TrimRight(in, "\n"))), nil
-	in = bytes.TrimSuffix(in, []byte("\n"))
-	return strings.Split(string(in), "\n"), nil
+	in = bytes.Trim(bytes.TrimSuffix(in, []byte("\n")), sep)
+	return strings.FieldsFunc(string(in), func(c rune) bool {
+		return strings.ContainsRune(sep, c)
+	}), nil
 }
 
 // Pager pipes the content of text to $PAGER, or prints it to stdout of this

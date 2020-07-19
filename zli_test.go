@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/mail"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -96,6 +97,42 @@ func TestInputOrFile(t *testing.T) {
 			}
 			if !strings.HasPrefix(g, tt.want) {
 				t.Errorf("wrong output\ngot:  %q\nwant: %q", g, tt.want)
+			}
+		})
+	}
+}
+
+func TestInputOrArgs(t *testing.T) {
+	tests := []struct {
+		in    []string
+		sep   string
+		stdin io.Reader
+		want  []string
+	}{
+		{[]string{"arg"}, "", nil, []string{"arg"}},
+		{nil, "", strings.NewReader(""), []string{}},
+		{nil, "\n ", strings.NewReader(""), []string{}},
+
+		{nil, "", strings.NewReader("a"), []string{"a"}},
+		{[]string{}, "", strings.NewReader("a"), []string{"a"}},
+		{[]string{}, "", strings.NewReader("a\nb c"), []string{"a\nb c"}},
+
+		{[]string{}, " ", strings.NewReader(" a b  c "), []string{"a", "b", "c"}},
+		{[]string{}, "\x00", strings.NewReader("aa\x00bb"), []string{"aa", "bb"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s", tt.in), func(t *testing.T) {
+			Stdin = tt.stdin
+			defer func() { Stdin = os.Stdin }()
+
+			got, err := InputOrArgs(tt.in, tt.sep, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("\ngot:  %#v\nwant: %#v", got, tt.want)
 			}
 		})
 	}
