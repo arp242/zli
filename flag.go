@@ -9,28 +9,28 @@ import (
 )
 
 type (
-	// ErrUnknownFlag is used when the flag parsing encounters unknown flags.
-	ErrUnknownFlag struct{ flag string }
+	// ErrFlagUnknown is used when the flag parsing encounters unknown flags.
+	ErrFlagUnknown struct{ flag string }
 
-	// ErrDoubleFlag is used when a flag is given more than once.
-	ErrDoubleFlag struct{ flag string }
+	// ErrFlagDouble is used when a flag is given more than once.
+	ErrFlagDouble struct{ flag string }
 
-	// ErrInvalidSyntax is used when a flag has an invalid syntax (e.g. "no" for
+	// ErrFlagInvalid is used when a flag has an invalid syntax (e.g. "no" for
 	// an int flag).
-	ErrInvalidSyntax struct {
+	ErrFlagInvalid struct {
 		flag string
 		err  error
 		kind string
 	}
 )
 
-func (e ErrUnknownFlag) Error() string { return fmt.Sprintf("unknown flag: %q", e.flag) }
-func (e ErrDoubleFlag) Error() string  { return fmt.Sprintf("flag given more than once: %q", e.flag) }
-func (e ErrInvalidSyntax) Error() string {
+func (e ErrFlagUnknown) Error() string { return fmt.Sprintf("unknown flag: %q", e.flag) }
+func (e ErrFlagDouble) Error() string  { return fmt.Sprintf("flag given more than once: %q", e.flag) }
+func (e ErrFlagInvalid) Error() string {
 	return fmt.Sprintf("%s: %s (must be a %s)", e.flag, e.err, e.kind)
 }
 
-func (e ErrInvalidSyntax) Unwrap() error { return e.err }
+func (e ErrFlagInvalid) Unwrap() error { return e.err }
 
 type Flags struct {
 	Program string   // Program name.
@@ -99,7 +99,7 @@ func (f *Flags) Parse() error {
 			}
 		}
 		if !found {
-			return &ErrUnknownFlag{arg}
+			return &ErrFlagUnknown{arg}
 		}
 		for _, s := range split {
 			args = append(args, "-"+s)
@@ -129,7 +129,7 @@ func (f *Flags) Parse() error {
 
 		flag, ok := f.match(a)
 		if !ok {
-			return &ErrUnknownFlag{a}
+			return &ErrFlagUnknown{a}
 		}
 
 		var err error
@@ -151,7 +151,7 @@ func (f *Flags) Parse() error {
 			switch flag.value.(type) {
 			case flagIntCounter, flagStringList, flagBool: // Not an error.
 			default:
-				return &ErrDoubleFlag{a}
+				return &ErrFlagDouble{a}
 			}
 		}
 
@@ -169,7 +169,7 @@ func (f *Flags) Parse() error {
 				if nErr := errors.Unwrap(err); nErr != nil {
 					err = nErr
 				}
-				return ErrInvalidSyntax{a, err, "number"}
+				return ErrFlagInvalid{a, err, "number"}
 			}
 			*v.v = int(x)
 		case flagInt64:
@@ -179,7 +179,7 @@ func (f *Flags) Parse() error {
 				if nErr := errors.Unwrap(err); nErr != nil {
 					err = nErr
 				}
-				return ErrInvalidSyntax{a, err, "number"}
+				return ErrFlagInvalid{a, err, "number"}
 			}
 			*v.v = x
 		case flagFloat64:
@@ -189,7 +189,7 @@ func (f *Flags) Parse() error {
 				if nErr := errors.Unwrap(err); nErr != nil {
 					err = nErr
 				}
-				return ErrInvalidSyntax{a, err, "number"}
+				return ErrFlagInvalid{a, err, "number"}
 			}
 			*v.v = x
 		case flagIntCounter:

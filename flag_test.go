@@ -9,11 +9,6 @@ import (
 	"zgo.at/zli"
 )
 
-var (
-	_ error = zli.ErrUnknownFlag{}
-	_ error = zli.ErrDoubleFlag{}
-)
-
 func ExampleFlags() {
 	// Create new flags from os.Args.
 	f := zli.NewFlags([]string{"example", "-vv", "-f=csv", "-a", "xx", "yy"})

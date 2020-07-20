@@ -11,13 +11,6 @@ import (
 	"zgo.at/zli"
 )
 
-// There is no automatic generation of a usage message; I find that much of the
-// time you get a much higher quality by writing one manually.
-//
-// That being said, the zli.Usage() function can apply some generic
-// substitutions; here it applies some formatting to the headers ("Usage:",
-// "Description:", etc.) and the flags ("-p", "-only-matching", etc.) which
-// makes it look a bit nicer and somewhat reminiscent of manpages.
 var usage = zli.Usage(zli.UsageTrim|zli.UsageHeaders|zli.UsageFlags, `
 Usage:
     grep [options..] pattern [file..]
