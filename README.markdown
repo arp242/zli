@@ -1,7 +1,7 @@
 zli is a Go library for writing CLI programs. It includes flag parsing, color
-escape codes, and various helpful utility functions. There's a little example at
-[cmd/grep/main.go](cmd/grep/main.go), which should give a decent overview of how
-actual programs look like.
+escape codes, various helpful utility functions, and makes testing fairly easy.
+There's a little example at [cmd/grep](cmd/grep), which should give a decent
+overview of how actual programs look like.
 
 Import as `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
 
@@ -14,21 +14,107 @@ Readme index:
 
 ### Utility functions
 
+`zli.Errorf()` and `zli.Fatalf()` work like `fmt.Printf()`, except that they
+print to stderr, prepend the program name, and always append a newline:
+
 ```go
-zli.Error("oh noes: %s", "u brok it")  // Prints to stderr: "progname: oh noes: u brok it"
-zli.Fatal(errors.New("yikes"))         // Like Error() but exits: "progname: yikes"
-zli.F(errors.New("yikes"))             // Shorter version which checks if err is nil first.
-
-fp, err := zli.FileOrInput("/a-file")  // Read data from a file...
-fp, err := zli.FileOrInput("-")        // ...or read from stdin; can also use "" for stdin
-defer fp.Close()                       // No-op close on stdin.
-
-fp, _ := os.Open("/file")              // Display contents of a reader in $PAGER.
-zli.Pager(fp)
-
-w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
-interactive := zli.IsTerminal(os.Stdout.Fd())  // Check if stdout is a terminal.
+zli.Errorf("oh noes: %s", "u brok it")   // "progname: oh noes: u brok it"
+zli.Fatalf("I swear it was %s", "Dave")  // "progname: I swear it was Dave" and exit 1
 ```
+
+`zli.F()` is a small wrapper/shortcut around zli.Fatalf()` which accepts an
+error and checks if it's `nil` first:
+
+```go
+err := f()
+zli.F(err)
+```
+
+---
+
+For many programs it's useful to be able to read from stdin or from a file; with
+`zli.InputOrFile()` this is pretty easy:
+
+```go
+fp, err := zli.InputOrFile("/a-file", false)  // Open a file.
+
+fp, err := zli.InputOrFile("-", false)        // ...or read from stdin; can also use "" for stdin
+defer fp.Close()                              // No-op close on stdin.
+```
+
+The second argument controls if a `reading from stdin...` message should be
+printed to stderr, which is a bit better UX IMHO (how often have you typed `grep
+foo` and waited, only to realize it's not doing anything?). See [Better UX when
+reading from stdin][stdin].
+
+With `zli.InputOrArgs()` you can read arguments from stdin if it's an empty
+list:
+
+```go
+args := zli.InputOrArgs(os.Args[1:], "\n", false)     // Split arguments on newline.
+args := zli.InputOrArgs(os.Args[1:], "\n\t ", false)  // Or on spaces and tabs too.
+```
+
+[stdin]: https://www.arp242.net/read-stdin.html
+
+---
+
+With `zli.Pager()` you can pipe the contents of a reader `$PAGER`; this will
+just copy the contents to stdout if `$PAGER` isn't set or on other errors:
+
+```go
+fp, _ := os.Open("/file")        // Display file in $PAGER.
+zli.Pager(fp)
+```
+
+If you want to page output your program generates you can use
+`zli.PagerStdout()` to swap `zli.Stdout` to a buffer:
+
+```go
+defer zli.PagerStdout()()               // Double ()()!
+fmt.Fprintln(zli.Stdout, "page me!")    // Displayed in the $PAGER.
+```
+
+This does require that your program writes to `zli.Stdout` instead of
+`os.Stdout`, which is probably a good idea for testing anyway. See the
+[Testing](#testing) section.
+
+You need to be a bit careful when calling `Exit()` explicitly, since that will
+exit immediately without running any defered functions. You have to either use a
+wrapper or call the returned function explicitly:
+
+```go
+func main() { zli.Exit(run()) }
+
+func run() {
+    defer zli.PagerStdout()()
+    fmt.Fprintln(zli.Stdout, "XXX")
+    return 1
+}
+```
+
+```go
+func main() {
+    runPager := zli.PagerStdout()
+    fmt.Fprintln(zli.Stdout, "XXX")
+
+    runPager()
+    zli.Exit(1)
+}
+```
+
+---
+
+zli helpfully includes the [go-isatty][isatty] and `GetSize()` from
+[x/crypto/ssh/terminal][ssh] as they're so commonly used:
+
+```go
+interactive := zli.IsTerminal(os.Stdout.Fd())  // Check if stdout is a terminal.
+w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
+```
+
+[isatty]: https://github.com/mattn/go-isatty/
+[ssh]: https://godoc.org/golang.org/x/crypto/ssh/terminal#GetSize
 
 
 ### Flag parsing
@@ -88,6 +174,7 @@ fmt.Println("All:", all.Bool())
 fmt.Println("Remaining:", f.Args)
 ```
 
+
 ### Colors
 
 You can add colors and some other text attributes to a string with
@@ -113,6 +200,10 @@ zli.Colorln("Contrast ratios is for suckers",         // 256 color.
 zli.Colorln("REAL men use TRUE color!",               // True color.
     zli.ColorHex("#fff"), zli.ColorHex("#00f").Bg())
 
+fmt.Println(zli.Red|zli.Bold, "red!")                 // Set colors "directly"
+fmt.Println("and bold!", zli.Reset)
+fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
+
 // Any combination can be used; the way this works is that the various
 // attributes are keps in different bit flags in Color (uint64), so it's easy to
 // use a single constant to represent it.
@@ -126,17 +217,56 @@ display and test colors.
 
 ### Testing
 
-#### Output and input
+zli uses to `zli.Stdin`, `zli.Stdout`, `zli.Stderr`, and `zli.Exit` instead of
+the `os.*` variants for everything. You can swap this out with test variants
+with the `zli.Test()` function.
 
-All the zli functions use `zli.Stdout`, `zli.Stderr`, `zli.Stdin`, and
-`zli.Exit`, which are set to the corresponding `os.*` default and can be
-overridden for testing.
+You can use these in your own program as well, if you want to test the output.
 
-For example to test `zli.Error()`:
+```go
+func TestX(t *testing.T) {
+	exit, in, out, reset := Test()
+	defer reset() // Reset everything back to the os.* functions.
+
+    // Write something to stderr (a bytes.Buffer) and read the output.
+	Error("oh noes!")
+    fmt.Println(out.String()) // zli.test: oh noes!
+
+    // Read from stdin.
+	in.WriteString("Hello")
+	fp, _ := InputOrFile("-", true)
+	got, _ := ioutil.ReadAll(fp)
+    fmt.Println(string(got)) // Hello
+
+	out.Reset()
+
+	et := func() {
+		fmt.Fprintln(Stdout, "one")
+		Exit(1)
+		fmt.Fprintln(Stdout, "two")
+	}
+
+    // exit panics to ensure the regular control flow of the program is aborted;
+    // to capture this run the function to be tested in a closure with
+    // exit.Recover(), which will recover() from the panic and set the exit
+    // code.
+	func() {
+		defer exit.Recover()
+		et()
+	}()
+    // Helper to check the statis code, so you don't have to derefrence and cast
+    // the value to int.
+	exit.Want(t, 1)
+
+    fmt.Println("Exit %d: %s\n", *exit, out.String()) // Exit 1: one
+```
+
+You don't need to use the `zli.Test()` function if you won't want to, you can
+just swap out stuff yourself as well:
 
 ```go
 buf := new(bytes.Buffer)
-Stderr = buf
+zli.Stderr = buf
 defer func() { Stderr = os.Stderr }()
 
 Error("oh noes!")
@@ -144,26 +274,20 @@ out := buf.String()
 fmt.Printf("buffer has: %q\n", out) // buffer has: "zli.test: oh noes!\n"
 ```
 
-You can (and probably should) use these in your own programs too if you want to
-test the output:
+`zli.IsTerminal()` and `zli.TerminalSize()` are variables, and can be swapped
+out as well:
 
 ```go
-fmt.Println("out")                // Hard to test.
-fmt.Fprintln(zli.Stdout, "out")   // Can be tested by swapping out zli.Stdout
+save := zli.IsTerminal
+zli.IsTerminal = func(uintptr) bool { return true }
+defer func() { IsTerminal = save }()
 ```
 
-You can test stdin as well:
-
-```go
-Stdin = strings.NewReader("hello")
-defer func() { Stdin = os.Stdin }()
-
-fp, err := InputOrFile("-", true)
-```
 
 #### Exit
 
-`os.Exit()` will terminate the entire program, including the text, which is
+A few notes on replacing `zli.Exit()` in tests: the difficulty with this is that
+`os.Exit()` will terminate the entire program, including the test, which is
 rarely what you want and difficult to test. You can replace `zli.Exit` with
 something like:
 
@@ -174,8 +298,8 @@ mayExit()
 fmt.Println("exit code", code)
 ```
 
-This works well enough for simple approaches, but there's a big caveat with
-this; for example consider:
+This works well enough for simple cases, but there's a big caveat with this; for
+example consider:
 
 ```go
 func mayExit() {
@@ -189,9 +313,9 @@ func mayExit() {
 }
 ```
 
-With the above testing substitution the program will continue after zli.Exit()`;
-which is a different program flow from normal execution. A simpel way to fix it
-so to modify the function to explicitly call `return`:
+With the above the program will continue after zli.Exit()`; which is a different
+program flow from normal execution. A simpel way to fix it so to modify the
+function to explicitly call `return`:
 
 ```go
 func mayExit() {
@@ -239,36 +363,4 @@ This will abort the program flow similar to `os.Exit()`, and the call to
 `mayExit` is wrapped in a function the test function itself will continue after
 the recover.
 
-#### zli.Test()
-
-To make all of the above easier there are a few helper functions:
-
-    zli.TestExit()    zli.Exit replacement.
-    zli.Test()        Replace all of Stdin, Stdout, Stderr, and Exit in one go.
-
-```go
-func TestX(t *testing.T) {
-	exit, in, out, reset := Test()
-	defer reset()
-
-	Error("oh noes!")
-    fmt.Println(out.String()) // zli.test: oh noes!
-
-	in.WriteString("Hello")
-	fp, _ := InputOrFile("-", true)
-	got, _ := ioutil.ReadAll(fp)
-    fmt.Println(string(got)) // Hello
-
-	out.Reset()
-
-	et := func() {
-		fmt.Fprintln(Stdout, "ET START")
-		Exit(1)
-		fmt.Fprintln(Stdout, "ET END")
-	}
-	func() {
-		defer exit.Recover()
-		et()
-	}()
-    fmt.Println("Exit %d: %s\n", *exit, out.String()) // Exit 1: ET START
-```
+`zli.TestExit` takes case of all of this.

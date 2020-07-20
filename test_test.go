@@ -21,19 +21,18 @@ func TestTestExit(t *testing.T) {
 
 	func() {
 		defer exit.Recover()
-		Fatal("oh noes!")
+		Fatalf("oh noes!")
 	}()
 	if exit != 1 {
 		t.Errorf("unexpected code: %d", exit)
 	}
-	fmt.Println("Exit", exit)
 }
 
 func TestTest(t *testing.T) {
 	exit, in, out, reset := Test()
 	defer reset()
 
-	Error("oh noes!")
+	Errorf("oh noes!")
 	if out.String() != "zli.test: oh noes!\n" {
 		t.Errorf("wrong stderr: %q", out.String())
 	}

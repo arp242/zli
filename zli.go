@@ -2,6 +2,7 @@ package zli
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,10 +23,13 @@ var (
 )
 
 // IsTerminal reports if this file descriptor is an interactive terminal.
-func IsTerminal(fd uintptr) bool { return isatty.IsTerminal(fd) }
+//
+// TODO: this is a bit tricky now, as we can replace zli.Stdout with something
+// else; checking os.Stdout may not be correct in those cases.
+var IsTerminal = func(fd uintptr) bool { return isatty.IsTerminal(fd) }
 
 // TerminalSize gets the dimensions of the given terminal.
-func TerminalSize(fd uintptr) (width, height int, err error) { return terminal.GetSize(int(fd)) }
+var TerminalSize = func(fd uintptr) (width, height int, err error) { return terminal.GetSize(int(fd)) }
 
 // Program gets the program name from argv.
 func Program() string {
@@ -35,26 +39,25 @@ func Program() string {
 	return filepath.Base(os.Args[0])
 }
 
-// Error prints an error message to stderr.
-//
-//   Error("oh noes: %q", something)   // printf arguments
-//   Error(err)                        // Print err.Error()
-//   Error(123)                        // Print %v (makes little sense, but okay)
-func Error(s interface{}, args ...interface{}) {
+// Error prints an error message to stderr prepended with the program name and
+// with a newline appended.
+func Errorf(s interface{}, args ...interface{}) {
 	prog := Program()
 	if prog != "" {
 		prog += ": "
 	}
 
 	switch ss := s.(type) {
+	case string:
+		fmt.Fprintf(Stderr, prog+ss+"\n", args...)
+	case []byte:
+		fmt.Fprintf(Stderr, prog+string(ss)+"\n", args...)
 	case error:
 		if len(args) > 0 {
 			fmt.Fprintf(Stderr, "%s%s %v\n", prog, ss.Error(), args)
 		} else {
 			fmt.Fprintf(Stderr, prog+ss.Error()+"\n")
 		}
-	case string:
-		fmt.Fprintf(Stderr, prog+ss+"\n", args...)
 	default:
 		if len(args) > 0 {
 			fmt.Fprintf(Stderr, prog+"%v %v\n", ss, args)
@@ -64,26 +67,17 @@ func Error(s interface{}, args ...interface{}) {
 	}
 }
 
-// Fatal prints the given message to stderr with Error() and exits.
-func Fatal(s interface{}, args ...interface{}) {
-	Error(s, args...)
+// Fatalf is like Errorf(), but will exit with a code of 1.
+func Fatalf(s interface{}, args ...interface{}) {
+	Errorf(s, args...)
 	Exit(1)
 }
 
-// F is like Fatal(), but won't do anything for nil errors.
-//
-// This is mostly intended for quick tests/scripts and the like; you need to be
-// careful with this as the following is hard to test:
-//
-//   err := f()
-//   zli.F(err)
-//
-// Because while you can swap out the exit with Test(), the code will still
-// continue. Use Fatal() followed by a return or Error() instead if you want to
-// test the code.
+// F prints the err.Error() to stderr with Errorf() and exits, but it won't do
+// anything if the error is nil.
 func F(err error) {
 	if err != nil {
-		Fatal(err)
+		Fatalf(err)
 	}
 }
 
@@ -148,6 +142,26 @@ func InputOrArgs(args []string, sep string, quiet bool) ([]string, error) {
 	}), nil
 }
 
+// PagerStdout replaces Stdout with a buffer and pipes the content of it to
+// $PAGER.
+//
+// The typical way to use this is at the start of a function like so:
+//
+//    defer zli.PageStdout()()
+//
+// You need to be a bit careful when calling Exit() explicitly, since that will
+// exit immediately without running any defered functions. You have to either
+// use a wrapper or call the returned function explicitly.
+func PagerStdout() func() {
+	buf := new(bytes.Buffer)
+	save := Stdout
+	Stdout = buf
+	return func() {
+		Stdout = save
+		Pager(buf)
+	}
+}
+
 // Pager pipes the content of text to $PAGER, or prints it to stdout of this
 // fails.
 func Pager(text io.Reader) {
@@ -170,7 +184,7 @@ func Pager(text io.Reader) {
 
 	pager, err := exec.LookPath(pager)
 	if err != nil {
-		fmt.Fprintf(Stderr, "running $PAGER: %s\n", err)
+		Errorf("zli.Pager: running $PAGER: %s", err)
 		io.Copy(Stdout, text)
 		return
 	}
@@ -182,10 +196,18 @@ func Pager(text io.Reader) {
 
 	err = cmd.Start()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "running $PAGER: %s\n", err)
+		Errorf("zli.Pager: running $PAGER: %s", err)
 		io.Copy(Stdout, text)
 		return
 	}
 
-	_ = cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && !exitErr.Success() {
+			// We're not sure if the program actually did something, so don't
+			// copy the text here.
+			Errorf("zli.Pager: running $PAGER: %s", err)
+		}
+	}
 }

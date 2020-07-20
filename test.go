@@ -3,6 +3,7 @@ package zli
 import (
 	"bytes"
 	"os"
+	"testing"
 	"unsafe"
 )
 
@@ -31,6 +32,15 @@ type TestExit int
 func (t *TestExit) Exit(c int) {
 	*t = TestExit(c)
 	panic(t)
+}
+
+// Want checks that the recorded exit code matches the given code and issues a
+// t.Error() if it doesn't.
+func (t *TestExit) Want(tt *testing.T, c int) {
+	tt.Helper()
+	if int(*t) != c {
+		tt.Errorf("wrong exit: %d; want: %d", *t, c)
+	}
 }
 
 // Recover any panics where the argument is this TestExit instance. it will

@@ -3,9 +3,7 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strconv"
@@ -28,11 +26,11 @@ Description:
     grep searches for a pattern in each file.
 
 Options:
-	pattern
-		A regular expression.
+    pattern
+        A regular expression.
 
-	file [file..]
-		Zero or more files; if none are given read from stdin.
+    file [file..]
+        Zero or more files; if none are given read from stdin.
 
     -o, -only-matching
         Print only the matching part, instead the entire line.
@@ -40,11 +38,11 @@ Options:
     -q, -quiet, -silent
         Don't show any output, exit with 0 on the first match found.
 
-    -color=when, --color=when
+    -color=when, --colour=when
         When to display colors: auto (default), never, or always.
 
-	-p, -no-pager
-		Don't pipe the output to $PAGER.
+    -p, -no-pager
+        Don't pipe the output to $PAGER.
 
 Exit code:
     0 if a pattern is found, 1 if nothing is found, 2 if there was an error.
@@ -69,7 +67,7 @@ func main() {
 	err := f.Parse()
 	if err != nil {
 		fmt.Println(usage)
-		zli.Fatal(err)
+		zli.Fatalf(err)
 	}
 
 	// The value needs to be retrieved through a getting function; this avoids
@@ -88,7 +86,7 @@ func main() {
 	patt := f.Shift()
 	if patt == "" {
 		fmt.Println(usage)
-		zli.Fatal("need a pattern")
+		zli.Fatalf("need a pattern")
 	}
 	re, err := regexp.Compile(patt)
 	zli.F(err)
@@ -99,11 +97,9 @@ func main() {
 	}
 
 	// Collect output in a memory buffer so we can send it to the pager.
-	var out io.ReadWriter
-	if noPager.Set() {
-		out = os.Stdout
-	} else {
-		out = new(bytes.Buffer)
+	pager := func() {}
+	if !noPager.Set() {
+		pager = zli.PagerStdout()
 	}
 
 	exit := 1 // Nothing selected is exit 1
@@ -132,7 +128,7 @@ func main() {
 			// Can also use Bool(), but it doesn't really matter, and Set()
 			// reads a bit nicer IMHO :-)
 			if silent.Set() {
-				os.Exit(0)
+				zli.Exit(0)
 			}
 			exit = 0
 
@@ -149,22 +145,20 @@ func main() {
 				}
 			}
 
-			if !zli.IsTerminal(os.Stdout.Fd()) {
-				// Not a terminal: print file path for every line.
-				fmt.Fprint(out, path, ":")
-			} else if !shownPath {
-				// Print file path as a header once on interactive terminals.
-				fmt.Fprintln(out, zli.Colorf(path, colorPath))
-				shownPath = true
+			if path != "" && path != "-" {
+				if !noPager.Set() || !zli.IsTerminal(os.Stdout.Fd()) {
+					// Not a terminal: print file path for every line.
+					fmt.Fprint(zli.Stdout, path, ":")
+				} else if !shownPath {
+					// Print file path as a header once on interactive terminals.
+					fmt.Fprintln(zli.Stdout, zli.Colorf(path, colorPath))
+					shownPath = true
+				}
 			}
-			fmt.Fprintln(out, zli.Colorf(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)
+			fmt.Fprintln(zli.Stdout, zli.Colorf(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)
 		}
 	}
 
-	// Show in pager.
-	if !noPager.Set() {
-		zli.Pager(out)
-	}
-
-	os.Exit(exit)
+	pager()
+	zli.Exit(exit)
 }

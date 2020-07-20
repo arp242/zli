@@ -9,6 +9,7 @@ import (
 	"net/mail"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -25,7 +26,9 @@ func TestFatal(t *testing.T) {
 		{42, nil, "zli.test: 42\n"},
 
 		{"oh noes", nil, "zli.test: oh noes\n"},
-		{"oh noes: %d", []interface{}{int(42)}, "zli.test: oh noes: 42\n"},
+		{"oh noes: %d", []interface{}{42}, "zli.test: oh noes: 42\n"},
+		{"oh noes: %d %d", []interface{}{42, 666}, "zli.test: oh noes: 42 666\n"},
+		{[]byte("oh noes: %d %d"), []interface{}{42, 666}, "zli.test: oh noes: 42 666\n"},
 
 		{errors.New("oh noes"), nil, "zli.test: oh noes\n"},
 		{errors.New("oh noes"), []interface{}{"data", 666}, "zli.test: oh noes [data 666]\n"},
@@ -34,20 +37,56 @@ func TestFatal(t *testing.T) {
 		{mail.Address{Name: "asd", Address: "qwe"}, []interface{}{"data", 666}, "zli.test: {asd qwe} [data 666]\n"},
 	}
 
-	Exit = func(int) {}
-
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			buf := new(bytes.Buffer)
-			Stderr = buf
-			Fatal(tt.in, tt.args...)
+			exit, _, out, reset := Test()
+			defer reset()
 
-			got := buf.String()
+			func() {
+				defer exit.Recover()
+				Fatalf(tt.in, tt.args...)
+			}()
+
+			if *exit != 1 {
+				t.Errorf("wrong exit: %d", *exit)
+			}
+			got := out.String()
 			if got != tt.want {
 				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
 			}
 		})
 	}
+}
+
+func TestF(t *testing.T) {
+	t.Run("nil", func(t *testing.T) {
+		_, _, out, reset := Test()
+		defer reset()
+
+		var err error
+		F(err) // Will panic if exit is set.
+
+		if out.String() != "" {
+			t.Errorf("out has data: %q", out.String())
+		}
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		exit, _, out, reset := Test()
+		defer reset()
+
+		func() {
+			defer exit.Recover()
+			F(errors.New("oh noes"))
+		}()
+
+		if *exit != 1 {
+			t.Errorf("wrong exit: %d", *exit)
+		}
+		if out.String() != "zli.test: oh noes\n" {
+			t.Errorf("wrong out: %q", out.String())
+		}
+	})
 }
 
 func TestInputOrFile(t *testing.T) {
@@ -136,6 +175,117 @@ func TestInputOrArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPager(t *testing.T) {
+	set := func(term bool) (*bytes.Buffer, func()) {
+		buf := new(bytes.Buffer)
+		Stdout = buf
+		Stderr = buf
+
+		save := IsTerminal
+		if term {
+			IsTerminal = func(uintptr) bool { return true }
+		}
+
+		return buf, func() {
+			Stdout = os.Stdout
+			Stderr = os.Stderr
+			IsTerminal = save
+		}
+	}
+
+	t.Run("not a terminal", func(t *testing.T) {
+		buf, c := set(false)
+		defer c()
+
+		Pager(strings.NewReader("buffy"))
+		if buf.String() != "buffy" {
+			t.Error(buf.String())
+		}
+	})
+
+	t.Run("no PAGER", func(t *testing.T) {
+		buf, c := set(true)
+		defer c()
+
+		os.Unsetenv("PAGER")
+		Pager(strings.NewReader("buffy"))
+		if buf.String() != "buffy" {
+			t.Errorf("out: %q", buf.String())
+		}
+	})
+
+	t.Run("PAGER doesn't exist", func(t *testing.T) {
+		buf, c := set(true)
+		defer c()
+
+		os.Setenv("PAGER", "doesntexistasdad")
+		Pager(strings.NewReader("buffy"))
+
+		want := "zli.test: zli.Pager: running $PAGER: exec: \"doesntexistasdad\": executable file not found in $PATH\nbuffy"
+		if buf.String() != want {
+			t.Errorf("out: %q", buf.String())
+		}
+	})
+
+	t.Run("PAGER doesn't exist w/ args", func(t *testing.T) {
+		buf, c := set(true)
+		defer c()
+
+		os.Setenv("PAGER", "doesntexistasdad -r -f")
+		Pager(strings.NewReader("buffy"))
+
+		want := "zli.test: zli.Pager: running $PAGER: exec: \"doesntexistasdad\": executable file not found in $PATH\nbuffy"
+		if buf.String() != want {
+			t.Errorf("out: %q", buf.String())
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		buf, c := set(true)
+		defer c()
+
+		// zli.Pager: running $PAGER: exit status 1
+		os.Setenv("PAGER", "false")
+		Pager(strings.NewReader("buffy"))
+
+		want := "zli.test: zli.Pager: running $PAGER: exit status 1\n"
+		if buf.String() != want {
+			t.Errorf("out: %q", buf.String())
+		}
+	})
+
+	t.Run("run it", func(t *testing.T) {
+		if runtime.GOOS == "windows" || runtime.GOOS == "js" {
+			t.Skip("requires cat shell tool")
+		}
+
+		buf, c := set(true)
+		defer c()
+
+		os.Setenv("PAGER", "cat")
+		Pager(strings.NewReader("buffy"))
+
+		if buf.String() != "buffy" {
+			t.Errorf("out: %q", buf.String())
+		}
+	})
+
+	t.Run("pagestdout", func(t *testing.T) {
+		buf, c := set(true)
+		defer c()
+
+		func() {
+			defer PagerStdout()()
+			fmt.Fprintf(Stdout, "buffy")
+		}()
+
+		if buf.String() != "buffy" {
+			t.Errorf("out: %q", buf.String())
+		}
+
+	})
 }
 
 func errorContains(out error, want string) bool {

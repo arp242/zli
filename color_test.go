@@ -21,6 +21,10 @@ func ExampleColor() {
 	zli.Colorln("REAL men use TRUE color!", // True color
 		zli.ColorHex("#fff")|zli.ColorHex("#00f").Bg())
 
+	fmt.Println(zli.Red|zli.Bold, "red!") // Set colors "directly"
+	fmt.Println("and bold!", zli.Reset)
+	fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
+
 	// Output:
 	// [31mYou're looking rather red[0m
 	// [1mA bold move[0m
@@ -28,6 +32,9 @@ func ExampleColor() {
 	// [1;4;31;42mWow, such beautiful text[0m
 	// [38;5;56;48;5;99mContrast ratios is for suckers[0m
 	// [38;2;255;255;255;48;2;0;0;255mREAL men use TRUE color![0m
+	// [1;31m red!
+	// and bold! [0m
+	// [31mc[35mo[36ml[34mo[33mr[0m
 }
 
 func TestColor(t *testing.T) {
@@ -158,12 +165,6 @@ func TestColor(t *testing.T) {
 	})
 }
 
-// master       BenchmarkColor-2         3248737               367 ns/op              88 B/op          4 allocs/op
-//
-// current      BenchmarkColor-2         1665027               735 ns/op             184 B/op          7 allocs/op
-// alloc slice  BenchmarkColor-2         2956413               403 ns/op              80 B/op          4 allocs/op
-// concat       BenchmarkColor-2         3343557               356 ns/op              64 B/op          3 allocs/op
-// custom join  BenchmarkColor-2         4726220               255 ns/op              64 B/op          2 allocs/op
 func BenchmarkColor(b *testing.B) {
 	c := zli.Green | zli.Red.Bg() | zli.Bold | zli.Underline
 	var s string

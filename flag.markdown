@@ -20,14 +20,17 @@ The Go standard package has some annoying properties:
   prints to stderr even when it really shouldn't (this is fixable, but many
   people don't).
 
-- Awkward to add flag aliases (e.g. have both `-v` and `-verbose`), or to use
-  the "-v for verbose, -vv for more verbose"-pattern.
+- Awkward to add flag aliases (e.g. have both `-v` and `-verbose`).
+
+- `prog -ab` is interpreted as a single flag even when they're boolean flags,
+  instead of `prog -a -b`.
+
+- You can't add flags more than once (and it won't give an error if you do!),
+  the last value is always used. So something like the "-v for verbose, -vv for
+  more verbose"-pattern or "-exclude foo -exclude bar" is hard.
 
 - `flag.StringVar(&s, ..)` requires declaring the variable first, and `s :=
   flag.String(..)` means having pointers everywhere. Neither is great IMO.
-
-- `prog -ab` is interpreted as a single flag, instead of `prog -a -b`. This is
-  not fixed in this package either (yet).
 
 I looked at some existing libraries and there were always some things to my
 dislike.

@@ -9,19 +9,6 @@ import (
 	"zgo.at/zli/internal/isatty"
 )
 
-const (
-	// Offsets where foreground and background colors are stored.
-	ColorOffsetFg = 16
-	ColorOffsetBg = 40
-
-	// Mask anything that's not a foreground or background colur.
-	maskFg Color = (255 | (255 << 8) | (16777215 << 40))
-	maskBg Color = (255 | (255 << 8) | (16777215 << 16))
-
-	// Mask just the foreground color.
-	maskFgOnly Color = (255 << 16) | (255 << 24) | (255 << 32)
-)
-
 /*
 Color is a set of attributes to apply; the attributes are stored as follows:
 
@@ -35,17 +22,18 @@ Color is a set of attributes to apply; the attributes are stored as follows:
 The terminal attributes are bold, underline, etc. are stored as a bitmask. The
 error flag signals there was an error parsing a hex color with ColorHex().
 
-The colors are stored separately for the background and foreground, the color
-mode bitmasks store which colors to apply and in which mode. No colors are
-applied if none of the color mode flags for the bg or fg are set.
+The colors are stored separately for the background and foreground, the colors
+are applied depending on the values of the color mode bitmasks: if it's blank,
+nothing is applied.
 
-The biggest advantage of this entire things is that we can can use a single
+The biggest advantage of storing it like this is that we can can use a single
 variable/function parameter to represent all terminal attributes, for example:
 
     var colorMatch = zli.Bold | zli.Red | zli.ColorHex("#f71").Bg()
     fmt.Println(zli.Colorf("foo", colorMatch))
 
-Which gives us a rather nicer API than using a slice or whatnot :-)
+Which IMHO gives a rather nicer API than using a slice or composing the colors
+with functions or some such.
 
 If you want to be really savvy about it then you can store it as a constant too:
 
@@ -56,6 +44,21 @@ This creates 24bit color stored as an int (0xff, 0x77, 0x11 is the same as
 sets the flag so the background is read as a 24bit color.
 */
 type Color uint64
+
+const (
+	// Mask anything that's not a foreground or background colur.
+	maskFg Color = (255 | (255 << 8) | (16777215 << 40))
+	maskBg Color = (255 | (255 << 8) | (16777215 << 16))
+
+	// Mask just the foreground color.
+	maskFgOnly Color = (255 << 16) | (255 << 24) | (255 << 32)
+)
+
+// Offsets where foreground and background colors are stored.
+const (
+	ColorOffsetFg = 16
+	ColorOffsetBg = 40
+)
 
 // Basic terminal attributes.
 const (
@@ -118,7 +121,18 @@ func (c Color) Bg() Color {
 	return (c &^ maskFgOnly) | ((c & maskFgOnly) << 24)
 }
 
-// String gets the starting escape sequence for this color code.
+// String gets the escape sequence for this color code.
+//
+// This will always return an empty string if WantColor is false or if the error
+// flag is set.
+//
+// You can use this to set colors directly with fmt.Print. You can reset the the
+// default with zli.Reset:
+//
+//     fmt.Println(zli.Red|zli.Bold, "red!") // Set colors "directly"
+//     fmt.Println("and bold!", zli.Reset)
+//
+//     fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
 func (c Color) String() string {
 	if !WantColor || c&ColorError != 0 {
 		return ""
@@ -127,12 +141,11 @@ func (c Color) String() string {
 		return "\x1b[0m"
 	}
 
-	// Allocate space for 4 attributes; most people will rarely go over that,
-	// and it'll avoid re-allocing on append() (e.g. for 3 attributes it's alloc
-	// 3 times to grow: 1 → 2 → 4).
+	// Preallocate space for 4 attributes; it'll avoid re-allocing on append().
+	// Otherwise if we start with an empty slice it'll grow and allocate 3 times
+	// for 3 attributes (1 → 2 → 4).
 	attrs := make([]string, 0, 4)
 
-	// Apply basic attributes.
 	if c&Bold != 0 {
 		attrs = append(attrs, "1")
 	}
@@ -163,38 +176,36 @@ func (c Color) String() string {
 
 	switch {
 	case c&ColorMode16 != 0:
-		x := (c&^maskFg)>>ColorOffsetFg + 30
-		if x > 37 {
-			x += 52
+		cc := (c&^maskFg)>>ColorOffsetFg + 30
+		if cc > 37 {
+			cc += 52
 		}
-		attrs = append(attrs, strconv.FormatUint(uint64(x), 10))
+		attrs = append(attrs, strconv.FormatUint(uint64(cc), 10))
 	case c&ColorMode256 != 0:
-		x := (c &^ maskFg) >> ColorOffsetFg
-		attrs = append(attrs, "38;5;"+strconv.FormatUint(uint64(x), 10))
+		attrs = append(attrs, "38;5;"+strconv.FormatUint(uint64((c&^maskFg)>>ColorOffsetFg), 10))
 	case c&ColorModeTrue != 0:
-		x := (c &^ maskFg) >> ColorOffsetFg
+		cc := (c &^ maskFg) >> ColorOffsetFg
 		attrs = append(attrs, "38;2;"+
-			strconv.FormatUint(uint64(x%256), 10)+";"+
-			strconv.FormatUint(uint64(x>>8%256), 10)+";"+
-			strconv.FormatUint(uint64(x>>16%256), 10))
+			strconv.FormatUint(uint64(cc%256), 10)+";"+
+			strconv.FormatUint(uint64(cc>>8%256), 10)+";"+
+			strconv.FormatUint(uint64(cc>>16%256), 10))
 	}
 
 	switch {
 	case c&ColorMode16Bg != 0:
-		x := (c&^maskBg)>>ColorOffsetBg + 40
-		if x > 47 {
-			x += 52
+		cc := (c&^maskBg)>>ColorOffsetBg + 40
+		if cc > 47 {
+			cc += 52
 		}
-		attrs = append(attrs, strconv.FormatUint(uint64(x), 10))
+		attrs = append(attrs, strconv.FormatUint(uint64(cc), 10))
 	case c&ColorMode256Bg != 0:
-		x := (c &^ maskBg) >> ColorOffsetBg
-		attrs = append(attrs, "48;5;"+strconv.FormatUint(uint64(x), 10))
+		attrs = append(attrs, "48;5;"+strconv.FormatUint(uint64((c&^maskBg)>>ColorOffsetBg), 10))
 	case c&ColorModeTrueBg != 0:
-		x := (c &^ maskBg) >> ColorOffsetBg
+		cc := (c &^ maskBg) >> ColorOffsetBg
 		attrs = append(attrs, "48;2;"+
-			strconv.FormatUint(uint64(x%256), 10)+";"+
-			strconv.FormatUint(uint64(x>>8%256), 10)+";"+
-			strconv.FormatUint(uint64(x>>16%256), 10))
+			strconv.FormatUint(uint64(cc%256), 10)+";"+
+			strconv.FormatUint(uint64(cc>>8%256), 10)+";"+
+			strconv.FormatUint(uint64(cc>>16%256), 10))
 	}
 
 	// This is a bit faster than "\x1b[" + strings.Join() + "m" ... gotta
@@ -216,6 +227,12 @@ func (c Color) String() string {
 //
 // The first 16 (starting at 0) are the same as the color names (Black, Red,
 // etc.) 16 to 231 are various colors. 232 to 255 are greyscale tones.
+//
+// The 16-231 colors should always be identical on every display (unlike the
+// basic colors, whose exact color codes are undefined and differ per
+// implementation).
+//
+// See ./cmd/colortest for a little CLI to display the colors.
 func Color256(n uint8) Color {
 	return Color(uint64(n)<<ColorOffsetFg) | ColorMode256
 }
@@ -223,8 +240,8 @@ func Color256(n uint8) Color {
 // ColorHex gets a 24-bit "true color" from a hex string such as "#f44" or
 // "#ff4444". The leading "#" is optional.
 //
-// Parsing errors are signaled with -0 (signed zero), which Colorf() shows as
-// "zli.Color!(ERROR n=1)", where 1 is the argument index.
+// Parsing errors are signaled with by setting the ColorError flag, which
+// Colorf() shows as "(zli.Color ERROR invalid hex color)".
 func ColorHex(hex string) Color {
 	hex = strings.TrimPrefix(hex, "#")
 	if len(hex) == 3 {
@@ -274,7 +291,6 @@ func Colorf(text string, c Color) string {
 	if attrs == "" {
 		return text
 	}
-
 	return attrs + text + Reset.String()
 }
 
