@@ -34,8 +34,8 @@ Options:
     -color=when, --colour=when
         When to display colors: auto (default), never, or always.
 
-    -p, -no-pager
-        Don't pipe the output to $PAGER.
+    -p, -pager
+        Pipe the output to $PAGER.
 
 Exit code:
     0 if a pattern is found, 1 if nothing is found, 2 if there was an error.
@@ -49,17 +49,18 @@ const (
 )
 
 func main() {
+	zli.ExitCode = 2
+
 	// Parse the flags.
 	f := zli.NewFlags(os.Args)
 	var (
-		only    = f.Bool(false, "o", "only-matching")
-		silent  = f.Bool(false, "q", "quiet", "silent")
-		noPager = f.Bool(false, "p", "no-pager")
-		color   = f.String("auto", "color", "colour")
+		only   = f.Bool(false, "o", "only-matching")
+		silent = f.Bool(false, "q", "quiet", "silent")
+		pager  = f.Bool(false, "p", "pager")
+		color  = f.String("auto", "color", "colour")
 	)
 	err := f.Parse()
 	if err != nil {
-		fmt.Println(usage)
 		zli.Fatalf(err)
 	}
 
@@ -78,7 +79,6 @@ func main() {
 	// regexp we want to match with.
 	patt := f.Shift()
 	if patt == "" {
-		fmt.Println(usage)
 		zli.Fatalf("need a pattern")
 	}
 	re, err := regexp.Compile(patt)
@@ -90,9 +90,9 @@ func main() {
 	}
 
 	// Collect output in a memory buffer so we can send it to the pager.
-	pager := func() {}
-	if !noPager.Set() {
-		pager = zli.PagerStdout()
+	runPager := func() {}
+	if pager.Set() {
+		runPager = zli.PagerStdout()
 	}
 
 	exit := 1 // Nothing selected is exit 1
@@ -139,7 +139,7 @@ func main() {
 			}
 
 			if path != "" && path != "-" {
-				if !noPager.Set() || !zli.IsTerminal(os.Stdout.Fd()) {
+				if pager.Set() || !zli.IsTerminal(os.Stdout.Fd()) {
 					// Not a terminal: print file path for every line.
 					fmt.Fprint(zli.Stdout, path, ":")
 				} else if !shownPath {
@@ -152,6 +152,6 @@ func main() {
 		}
 	}
 
-	pager()
+	runPager()
 	zli.Exit(exit)
 }

@@ -67,10 +67,13 @@ func Errorf(s interface{}, args ...interface{}) {
 	}
 }
 
+// ExitCode is the exit code to use for Fatalf() and F()
+var ExitCode = 1
+
 // Fatalf is like Errorf(), but will exit with a code of 1.
 func Fatalf(s interface{}, args ...interface{}) {
 	Errorf(s, args...)
-	Exit(1)
+	Exit(ExitCode)
 }
 
 // F prints the err.Error() to stderr with Errorf() and exits, but it won't do
