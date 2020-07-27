@@ -1,4 +1,4 @@
-// +build appengine js
+// +build appengine js ppc64 ppc64le
 
 package isatty
 
