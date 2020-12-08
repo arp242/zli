@@ -19,11 +19,14 @@ func TestUsage(t *testing.T) {
 			`
 				Hello:
 				  text:
+
 				s p:
+
 				s-p:
-				 text:
+				No blank line:
+
 			`,
-			"\n\x1b[1;4mHello:\x1b[0m\n  text:\n\x1b[1;4ms p:\x1b[0m\n\x1b[1;4ms-p:\x1b[0m\n text:\n",
+			"\n\x1b[1mHello:\x1b[0m\n  text:\n\n\x1b[1ms p:\x1b[0m\n\n\x1b[1ms-p:\x1b[0m\nNo blank line:\n\n",
 		},
 
 		{
@@ -48,6 +51,7 @@ func TestUsage(t *testing.T) {
 			got := zli.Usage(tt.flags, tt.in)
 			if got != tt.want {
 				t.Errorf("\ngot:  %q\nwant: %q\n\n%s", got, tt.want, got)
+				fmt.Println(got)
 			}
 		})
 	}

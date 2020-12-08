@@ -19,7 +19,8 @@ const (
 	//
 	//   Header:
 	//
-	// They must be at the start of the line and end with a :
+	// A header must be at the start of the line, preceded by a blank line, and
+	// end with a double colon (:).
 	UsageHeaders = 2
 
 	// UsageFlags formats flags in the form of:
@@ -36,6 +37,14 @@ var (
 	reFlags  = regexp.MustCompile(`\B-{1,2}[a-z0-9=-]+\b`)
 )
 
+var (
+	// FormatHeader is the formatting to apply for a header.
+	FormatHeader = Bold
+
+	// FormatFlag is the formatting to apply for a flag.
+	FormatFlag = Underline
+)
+
 // Usage applies some formatting to a usage message. See the Usage* constants.
 func Usage(opts int, text string) string {
 	if opts&UsageTrim != 0 {
@@ -45,15 +54,15 @@ func Usage(opts int, text string) string {
 	if opts&UsageHeaders != 0 {
 		split := strings.Split(text, "\n")
 		for i := range split {
-			if reHeader.MatchString(split[i]) {
-				split[i] = Colorf(split[i], Bold|Underline)
+			if reHeader.MatchString(split[i]) && (i == 0 || split[i-1] == "") {
+				split[i] = Colorf(split[i], FormatHeader)
 			}
 		}
 		text = strings.Join(split, "\n")
 	}
 
 	if opts&UsageFlags != 0 {
-		text = reFlags.ReplaceAllString(text, Colorf(`$0`, Underline))
+		text = reFlags.ReplaceAllString(text, Colorf(`$0`, FormatFlag))
 	}
 
 	return text
