@@ -5,7 +5,7 @@ overview of how actual programs look like.
 
 Import as `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
 
-Readme index:
+**Readme index**:
 [Utility functions](#utility-functions) ·
 [Flag parsing](#flag-parsing) ·
 [Colours](#colours) ·
@@ -30,8 +30,6 @@ err := f()
 zli.F(err)
 ```
 
----
-
 For many programs it's useful to be able to read from stdin or from a file,
 depending on what arguments the user gave. With `zli.InputOrFile()` this is
 pretty easy:
@@ -45,7 +43,7 @@ defer fp.Close()                              // No-op close on stdin.
 
 The second argument controls if a `reading from stdin...` message should be
 printed to stderr, which is a bit better UX IMHO (how often have you typed `grep
-foo` and waited, only to realize it's waiting for stdin?). See [Better UX when
+foo` and waited, only to realize it's waiting for stdin?) See [Better UX when
 reading from stdin][stdin].
 
 With `zli.InputOrArgs()` you can read arguments from stdin if it's an empty
@@ -58,10 +56,8 @@ args := zli.InputOrArgs(os.Args[1:], "\n\t ", false)  // Or on spaces and tabs t
 
 [stdin]: https://www.arp242.net/read-stdin.html
 
----
-
-With `zli.Pager()` you can pipe the contents of a reader `$PAGER`; this will
-just copy the contents to stdout if `$PAGER` isn't set or on other errors:
+`zli.Pager()` pipes the contents of a reader `$PAGER`. It will copy the contents
+to stdout if `$PAGER` isn't set or on other errors:
 
 ```go
 fp, _ := os.Open("/file")        // Display file in $PAGER.
@@ -103,8 +99,6 @@ func main() {
     zli.Exit(1)
 }
 ```
-
----
 
 zli helpfully includes the [go-isatty][isatty] and `GetSize()` from
 [x/crypto/ssh/terminal][ssh] as they're so commonly used:
@@ -195,10 +189,9 @@ The flag format is as follows:
 ---
 
 There is no automatic generation of a usage message; I find that much of the
-time you get a much higher quality by writing one manually.
-
-That being said, with `zli.Usage()` you can apply some generic substitutions
-giving a format somewhat reminiscent to manpages:
+time you get a much higher quality by writing one manually. It does provide
+`zli.Usage()` you can apply some generic substitutions giving a format somewhat
+reminiscent of manpages:
 
     UsageTrim      Trim leading/trailing whitespace, and ensure it ends with \n
     UsageHeaders   Format headers in the form "^Name:" as bold and underline.
@@ -209,7 +202,8 @@ See the grep example.
 ### Colors
 
 You can add colors and some other text attributes to a string with
-`zli.Colorf()`, which returns a modified string with the terminal escape codes.
+`zli.Colorf()`, which returns a modified string with the terminal escape codes,
+ending with reset.
 
 It won't do anything if `zli.WantColor` is `false`; this is disabled by default
 if the output isn't a terminal or `NO_COLOR` is set, but you can override it if
@@ -217,7 +211,7 @@ the user sets `--color=force` or something.
 
 `zli.Colorln()` is a convenience wrapper for `fmt.Println(zli.Colorf(..))`.
 
-There are constants for the basic terminal attributes and 16-color pallete which
+There are constants for the basic terminal attributes and 16-color palette which
 may be combined freely by adding them together:
 
 ```go
@@ -251,8 +245,8 @@ display and test colors.
 
 ---
 
-You don't need to use the color codes, you can use the `String()` method to get
-the terminal escape codes:
+For some more advanced cases you can use `Color.String()` directly, but this
+won't look at `zli.WantColor` and you'll need to manually apply the reset code:
 
 ```go
 fmt.Println(zli.Red|zli.Bold, "red!")                 // Print escape codes.
@@ -260,8 +254,6 @@ fmt.Println("and bold!", zli.Reset)
 
 fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
 ```
-
----
 
 Because the color is stored in an `uint64` you can assign them to a constant:
 
@@ -285,7 +277,7 @@ const color2 = zli.Bold | zli.Red | zli.ColorModeTrueBg |
 This creates a color stored as an int, shifts it to the correct location, and
 sets the flag to signal how to interpret it.
 
-Do you really want to do this just to create a `const` instead of a `var?
+Do you really want to do this just to create a `const` instead of a `var`?
 Probably not 😅
 
 
@@ -295,7 +287,8 @@ zli uses to `zli.Stdin`, `zli.Stdout`, `zli.Stderr`, and `zli.Exit` instead of
 the `os.*` variants for everything. You can swap this out with test variants
 with the `zli.Test()` function.
 
-You can use these in your own program as well, if you want to test the output.
+You can use these in your own program as well, if you want to test the output of
+a program.
 
 ```go
 func TestX(t *testing.T) {
@@ -363,7 +356,7 @@ defer func() { IsTerminal = save }()
 A few notes on replacing `zli.Exit()` in tests: the difficulty with this is that
 `os.Exit()` will terminate the entire program, including the test, which is
 rarely what you want and difficult to test. You can replace `zli.Exit` with
-something like:
+something like (`zli.TestExit()` takes care of all of this):
 
 ```go
 var code int
@@ -387,9 +380,9 @@ func mayExit() {
 }
 ```
 
-With the above the program will continue after zli.Exit()`; which is a different
-program flow from normal execution. A simpel way to fix it so to modify the
-function to explicitly call `return`:
+With the above the program will continue after `zli.Exit()`; which is a
+different program flow from normal execution. A simple way to fix it so to
+modify the function to explicitly call `return`:
 
 ```go
 func mayExit() {
@@ -436,5 +429,3 @@ func TestFoo(t *testing.T) {
 This will abort the program flow similar to `os.Exit()`, and the call to
 `mayExit` is wrapped in a function the test function itself will continue after
 the recover.
-
-`zli.TestExit` takes care of all of this.

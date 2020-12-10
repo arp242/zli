@@ -25,6 +25,9 @@ Options:
     file [file..]
         Zero or more files; if none are given read from stdin.
 
+    -h, -help
+        Show this help.
+
     -o, -only-matching
         Print only the matching part, instead the entire line.
 
@@ -54,6 +57,7 @@ func main() {
 	// Parse the flags.
 	f := zli.NewFlags(os.Args)
 	var (
+		help   = f.Bool(false, "h", "help")
 		only   = f.Bool(false, "o", "only-matching")
 		silent = f.Bool(false, "q", "quiet", "silent")
 		pager  = f.Bool(false, "p", "pager")
@@ -62,6 +66,11 @@ func main() {
 	err := f.Parse()
 	if err != nil {
 		zli.Fatalf(err)
+	}
+
+	if help.Bool() {
+		fmt.Print(usage)
+		return
 	}
 
 	// The value needs to be retrieved through a getting function; this avoids
@@ -79,7 +88,9 @@ func main() {
 	// regexp we want to match with.
 	patt := f.Shift()
 	if patt == "" {
-		zli.Fatalf("need a pattern")
+		zli.Errorf(zli.Colorf("need a pattern\n", zli.Bold))
+		fmt.Fprint(os.Stderr, usage)
+		zli.Exit(2)
 	}
 	re, err := regexp.Compile(patt)
 	zli.F(err)

@@ -19,7 +19,7 @@ func ExampleColor() {
 		zli.Color256(56)|zli.Color256(99).Bg())
 
 	zli.Colorln("REAL men use TRUE color!", // True color
-		zli.ColorHex("#fff")|zli.ColorHex("#00f").Bg())
+		zli.ColorHex("#678")|zli.ColorHex("#abc").Bg())
 
 	fmt.Println(zli.Red|zli.Bold, "red!") // Set colors "directly"
 	fmt.Println("and bold!", zli.Reset)
@@ -31,7 +31,7 @@ func ExampleColor() {
 	// [41mTomato[0m
 	// [1;4;31;42mWow, such beautiful text[0m
 	// [38;5;56;48;5;99mContrast ratios is for suckers[0m
-	// [38;2;255;255;255;48;2;0;0;255mREAL men use TRUE color![0m
+	// [38;2;102;119;136;48;2;170;187;204mREAL men use TRUE color![0m
 	// [1;31m red!
 	// and bold! [0m
 	// [31mc[35mo[36ml[34mo[33mr[0m
@@ -53,8 +53,8 @@ func TestColor(t *testing.T) {
 
 		{zli.Color256(0) | zli.Color256(0).Bg(), "\x1b[38;5;0;48;5;0m"},
 		{zli.Color256(255) | zli.Color256(255).Bg(), "\x1b[38;5;255;48;5;255m"},
-		{zli.ColorHex("#000") | zli.ColorHex("#000").Bg(), "\x1b[38;2;0;0;0;48;2;0;0;0m"},
-		{zli.ColorHex("#fff") | zli.ColorHex("#fff").Bg(), "\x1b[38;2;255;255;255;48;2;255;255;255m"},
+		{zli.ColorHex("#678") | zli.ColorHex("#abc").Bg(), "\x1b[38;2;102;119;136;48;2;170;187;204m"},
+		{zli.ColorHex("#678") | zli.ColorHex("#abc").Bg(), "\x1b[38;2;102;119;136;48;2;170;187;204m"},
 
 		// Various combinations.
 		{zli.Red, "\x1b[31m"},
@@ -73,7 +73,7 @@ func TestColor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("%d", tt.in), func(t *testing.T) {
+		t.Run("", func(t *testing.T) {
 			zli.WantColor = false
 			t.Run("WantColor=false", func(t *testing.T) {
 				got := tt.in.String()
