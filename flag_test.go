@@ -189,6 +189,20 @@ func TestFlags(t *testing.T) {
 				int64 1 → 42
 				args  → 0 []
 			`, ""},
+		{"int64", []string{"prog", "-i", "1_000_000"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Int64(0, "i")}
+			}, `
+				int64 1 → 1000000
+				args  → 0 []
+			`, ""},
+		{"int64", []string{"prog", "-i", "0x10"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Int64(0, "i")}
+			}, `
+				int64 1 → 16
+				args  → 0 []
+			`, ""},
 		{"float64", []string{"prog", "-i", "42.666"},
 			func(f *zli.Flags) []interface{} {
 				return []interface{}{f.Float64(0, "i")}

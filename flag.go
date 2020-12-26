@@ -164,7 +164,7 @@ func (f *Flags) Parse() error {
 			*v.v, *v.s = next()
 		case flagInt:
 			val, *v.s = next()
-			x, err := strconv.ParseInt(val, 10, 64)
+			x, err := strconv.ParseInt(val, 0, 64)
 			if err != nil {
 				if nErr := errors.Unwrap(err); nErr != nil {
 					err = nErr
@@ -174,7 +174,7 @@ func (f *Flags) Parse() error {
 			*v.v = int(x)
 		case flagInt64:
 			val, *v.s = next()
-			x, err := strconv.ParseInt(val, 10, 64)
+			x, err := strconv.ParseInt(val, 0, 64)
 			if err != nil {
 				if nErr := errors.Unwrap(err); nErr != nil {
 					err = nErr
