@@ -1,6 +1,8 @@
 package zli
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -30,6 +32,9 @@ const (
 	//   -flag=foo
 	//   -flag=[foo]
 	UsageFlags = 4
+
+	// UsageProgram replaces "%(prog)" with filepath.Base(os.Args[0]).
+	UsageProgram = 8
 )
 
 var (
@@ -49,6 +54,10 @@ var (
 func Usage(opts int, text string) string {
 	if opts&UsageTrim != 0 {
 		text = strings.TrimSpace(text) + "\n"
+	}
+
+	if opts&UsageProgram != 0 {
+		text = strings.ReplaceAll(text, "%(prog)", filepath.Base(os.Args[0]))
 	}
 
 	if opts&UsageHeaders != 0 {
