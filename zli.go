@@ -56,7 +56,7 @@ func Errorf(s interface{}, args ...interface{}) {
 		if len(args) > 0 {
 			fmt.Fprintf(Stderr, "%s%s %v\n", prog, ss.Error(), args)
 		} else {
-			fmt.Fprintf(Stderr, prog+ss.Error()+"\n")
+			fmt.Fprintln(Stderr, prog+ss.Error())
 		}
 	default:
 		if len(args) > 0 {
