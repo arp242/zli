@@ -68,6 +68,57 @@ func (f *Flags) Shift() string {
 	return a
 }
 
+// Sentinel return values for ShiftCommand()
+const (
+	CommandNoneGiven = "\x00"
+	CommandAmbiguous = "\x01"
+	CommandUnknown   = "\x02"
+)
+
+// ShiftCommand shifts a value from the argument list, and matches it with the
+// list of commands.
+//
+// Commands can be matched as an abbreviation as long as it's unambiguous; if
+// you have "search" and "identify" then "i", "id", etc. will all return
+// "identify".
+//
+// If you have the commands "search" and "see", then "s" or "se" are ambiguous,
+// and it will return the special CommandAmbiguous sentinel value.
+//
+// Commands can also contain aliases as "alias=cmd"; for example "ci=commit".
+//
+// It will return CommandNoneGiven if there is no command, and CommandUnknown if
+// the command is not found.
+func (f *Flags) ShiftCommand(cmds ...string) string {
+	cmd := f.Shift()
+	if cmd == "" {
+		return CommandNoneGiven
+	}
+	cmd = strings.ToLower(cmd)
+
+	var found string
+	for _, c := range cmds {
+		if c == cmd {
+			return cmd
+		}
+
+		if strings.HasPrefix(c, cmd) {
+			if found != "" {
+				return CommandAmbiguous
+			}
+			if i := strings.IndexRune(c, '='); i > -1 {
+				c = c[i+1:]
+			}
+			found = c
+		}
+	}
+
+	if found == "" {
+		return CommandUnknown
+	}
+	return found
+}
+
 func (f *Flags) Parse() error {
 	// Modify f.Args to split out grouped boolean values: "prog -ab" becomes
 	// "prog -a -b"

@@ -475,6 +475,38 @@ func TestFlags(t *testing.T) {
 	}
 }
 
+func TestShiftCommand(t *testing.T) {
+	tests := []struct {
+		in       string
+		commands []string
+		want     string
+	}{
+		{"", nil, zli.CommandNoneGiven},
+		{"-a", nil, zli.CommandNoneGiven},
+
+		{"help", []string{"asd"}, zli.CommandUnknown},
+
+		{"help", []string{"help", "heee"}, "help"},
+		{"hel", []string{"help", "heee"}, "help"},
+		{"he", []string{"help", "heee"}, zli.CommandAmbiguous},
+
+		{"usage", []string{"help", "usage=help"}, "help"},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			f := zli.NewFlags([]string{"test", tt.in})
+			f.Bool(false, "a")
+			f.Parse()
+
+			got := f.ShiftCommand(tt.commands...)
+			if got != tt.want {
+				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // Just to make sure it's not ridiculously slow or anything.
 func BenchmarkFlag(b *testing.B) {
 	b.ReportAllocs()
