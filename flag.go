@@ -302,6 +302,14 @@ type (
 	}
 )
 
+func (f flagBool) Pointer() *bool           { return f.v }
+func (f flagString) Pointer() *string       { return f.v }
+func (f flagInt) Pointer() *int             { return f.v }
+func (f flagInt64) Pointer() *int64         { return f.v }
+func (f flagFloat64) Pointer() *float64     { return f.v }
+func (f flagIntCounter) Pointer() *int      { return f.v }
+func (f flagStringList) Pointer() *[]string { return f.v }
+
 func (f flagBool) Bool() bool              { return *f.v }
 func (f flagString) String() string        { return *f.v }
 func (f flagInt) Int() int                 { return *f.v }
