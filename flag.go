@@ -124,7 +124,7 @@ func (f *Flags) Parse() error {
 	// "prog -a -b"
 	args := make([]string, 0, len(f.Args))
 	for _, arg := range f.Args {
-		if !strings.HasPrefix(arg, "-") {
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
 			args = append(args, arg)
 			continue
 		}
@@ -168,7 +168,7 @@ func (f *Flags) Parse() error {
 			continue
 		}
 
-		if a == "" || a[0] != '-' {
+		if a == "" || a == "-" || a[0] != '-' {
 			p = append(p, a)
 			continue
 		}

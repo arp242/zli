@@ -134,6 +134,14 @@ func TestFlags(t *testing.T) {
 			string 1 → "arg"
 			args     → 2 [pos 1 pos 2]
 			`, ""},
+
+		{"single - is a valid argument", []string{"progname", "-s", "-", "-"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.String("", "s")}
+			}, `
+			string 1 → "-"
+			args     → 1 [-]
+			`, ""},
 		// Make sure parsing is stopped after --
 		{
 			"-- bool", []string{"prog", "-b", "--"},
