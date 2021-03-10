@@ -247,6 +247,9 @@ func (f *Flags) Parse() error {
 			*v.s = true
 			*v.v++
 		case flagStringList:
+			if !*v.s {
+				*v.v = nil
+			}
 			n, s := next()
 			*v.s = s
 			*v.v = append(*v.v, n)
