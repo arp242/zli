@@ -2,12 +2,14 @@ package zli_test
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"zgo.at/zli"
 )
 
 func ExampleColor() {
+	zli.Stdout = os.Stdout
 	zli.Colorln("You're looking rather red", zli.Red) // Apply a color.
 	zli.Colorln("A bold move", zli.Bold)              // Or an attribute.
 	zli.Colorln("Tomato", zli.Red.Bg())               // Transform to background color.

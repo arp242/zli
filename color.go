@@ -245,7 +245,7 @@ func Colorf(text string, c Color) string {
 // Colorln prints colorized output if WantColor is true.
 //
 // The text will end with the reset code.
-func Colorln(text string, c Color) { fmt.Println(Colorf(text, c)) }
+func Colorln(text string, c Color) { fmt.Fprintln(Stdout, Colorf(text, c)) }
 
 // DeColor removes ANSI color escape sequences from a string.
 func DeColor(text string) string {

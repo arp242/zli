@@ -9,11 +9,11 @@ func EraseLine() { Stdout.Write([]byte("\x1b[2K\r")) }
 // ReplaceLine replaces the current line.
 func ReplaceLine(a ...interface{}) {
 	EraseLine()
-	fmt.Print(a...)
+	fmt.Fprint(Stdout, a...)
 }
 
 // ReplaceLinef replaces the current line.
 func ReplaceLinef(s string, a ...interface{}) {
 	EraseLine()
-	fmt.Printf(s, a...)
+	fmt.Fprintf(Stdout, s, a...)
 }
