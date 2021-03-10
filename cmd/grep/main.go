@@ -12,11 +12,9 @@ import (
 )
 
 var usage = zli.Usage(zli.UsageTrim|zli.UsageHeaders|zli.UsageFlags, `
-Usage:
-    grep [options..] pattern [file..]
+Usage: grep [options..] pattern [file..]
 
-Description:
-    grep searches for a pattern in each file.
+grep searches for a pattern in each file.
 
 Options:
     pattern
@@ -34,7 +32,7 @@ Options:
     -q, -quiet, -silent
         Don't show any output, exit with 0 on the first match found.
 
-    -color=when, --colour=when
+    -color=when, -colour=when
         When to display colors: auto (default), never, or always.
 
     -p, -pager
@@ -52,6 +50,7 @@ const (
 )
 
 func main() {
+	// Set the exit code for zli.F() and zli.Fatalf().
 	zli.ExitCode = 2
 
 	// Parse the flags.
@@ -68,34 +67,41 @@ func main() {
 		zli.Fatalf(err)
 	}
 
+	// The flag value needs to be retrieved through a Bool() (or String(),
+	// Int(), etc.); this avoids having to deal with pointers.
+	//
+	// You can still use help.Pointer() if you really want a pointer.
+	//
+	// You can use help.Set() to see if the flag was present on the commandline
+	// at all; this can be useful to disambiguate between zero values such as an
+	// empty string or 0, and the flag not being present on the commandline.
 	if help.Bool() {
 		fmt.Print(usage)
 		return
 	}
 
-	// The value needs to be retrieved through a getting function; this avoids
-	// having to deal with pointers and the like. You can use color.Set() to see
-	// if the flag was present on the commandline at all.
 	switch color.String() {
+	case "auto": // Do nothing.
 	case "always":
 		zli.WantColor = true
 	case "never":
 		zli.WantColor = false
+	default:
+		zli.Fatalf("invalid value for -color: %q", color.String())
 	}
 
-	// Shift() removes the first positional argument, or returns an empty string
-	// if there isn't any. In this case, the first positional argument is the
-	// regexp we want to match with.
+	// Shift() removes and returns the first positional argument, or returns an
+	// empty string if there aren't any positional arguments left. In this case,
+	// the first positional argument is the regexp we want to match with.
 	patt := f.Shift()
 	if patt == "" {
-		zli.Errorf(zli.Colorf("need a pattern\n", zli.Bold))
-		fmt.Fprint(os.Stderr, usage)
-		zli.Exit(2)
+		zli.Fatalf("need a pattern")
 	}
 	re, err := regexp.Compile(patt)
 	zli.F(err)
 
-	// No File arguments? Read from stdin, InputOrFile() will take care of that.
+	// Read from stdin if there are no files given. InputOrFile() will take care
+	// of this.
 	if len(f.Args) == 0 {
 		f.Args = []string{"-"}
 	}
@@ -113,10 +119,10 @@ func main() {
 		zli.F(err)
 		defer fp.Close()
 
-		var shownPath = false
 		var (
-			scan   = bufio.NewScanner(fp)
-			lineNr = int64(0)
+			shownPath = false
+			scan      = bufio.NewScanner(fp)
+			lineNr    = int64(0)
 		)
 		for scan.Scan() {
 			l := scan.Text()
@@ -159,7 +165,13 @@ func main() {
 					shownPath = true
 				}
 			}
-			fmt.Fprintln(zli.Stdout, zli.Colorf(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)
+
+			// We print to zli.Stdout instead of using os.Stdout as this can be
+			// swapped out in tests (see zli.Test()). This is also how
+			// zli.PagerStdout() works: everything is written to a buffer and
+			// displayed when we're done.
+			fmt.Fprintln(zli.Stdout,
+				zli.Colorf(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)
 		}
 	}
 

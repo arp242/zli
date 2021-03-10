@@ -26,6 +26,14 @@ import (
 //
 // The function wrapper is needed so that the test function itself doesn't get
 // aborted.
+//
+// TODO: this isn't thread-safe in cases where os.Exit() gets called from a
+// goroutine in the running program.
+//
+// type TextExit struct {
+//   mu    *sync.Mutex
+//   exits []int
+// }
 type TestExit int
 
 // Exit sets TestExit to the given status code and panics with itself.
