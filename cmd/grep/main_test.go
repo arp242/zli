@@ -68,8 +68,7 @@ func TestGrep(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			run := func(isTerm bool, want string) {
-				exit, in, out, reset := zli.Test()
-				defer reset()
+				exit, in, out := zli.Test(t)
 
 				s := zli.IsTerminal
 				zli.WantColor = isTerm

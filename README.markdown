@@ -292,8 +292,7 @@ a program.
 
 ```go
 func TestX(t *testing.T) {
-    exit, in, out, reset := Test()
-    defer reset() // Reset everything back to the os.* functions.
+    exit, in, out := Test(t) // Resets everything back to os.* with t.Cleanup()
 
     // Write something to stderr (a bytes.Buffer) and read the output.
     Error("oh noes!")

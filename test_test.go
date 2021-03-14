@@ -29,8 +29,7 @@ func TestTestExit(t *testing.T) {
 }
 
 func TestTest(t *testing.T) {
-	exit, in, out, reset := Test()
-	defer reset()
+	exit, in, out := Test(t)
 
 	Errorf("oh noes!")
 	if out.String() != "zli.test: oh noes!\n" {

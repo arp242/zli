@@ -66,8 +66,10 @@ func (t *TestExit) Recover() {
 
 // Test replaces Stdin, Stdout, Stderr, and Exit for testing.
 //
-// The code points to the latest zli.Exit() return code;
-func Test() (exit *TestExit, in, out *bytes.Buffer, reset func()) {
+// The state will be reset when the test finishes.
+//
+// The code points to the latest zli.Exit() return code.
+func Test(t *testing.T) (exit *TestExit, in, out *bytes.Buffer) {
 	in = new(bytes.Buffer)
 	Stdin = in
 
@@ -79,10 +81,12 @@ func Test() (exit *TestExit, in, out *bytes.Buffer, reset func()) {
 	*exit = -1
 	Exit = exit.Exit
 
-	return exit, in, out, func() {
+	t.Cleanup(func() {
 		Exit = os.Exit
 		Stdin = os.Stdin
 		Stdout = os.Stdout
 		Stderr = os.Stderr
-	}
+	})
+
+	return exit, in, out
 }

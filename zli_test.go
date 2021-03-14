@@ -39,8 +39,7 @@ func TestFatal(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
-			exit, _, out, reset := Test()
-			defer reset()
+			exit, _, out := Test(t)
 
 			func() {
 				defer exit.Recover()
@@ -60,8 +59,7 @@ func TestFatal(t *testing.T) {
 
 func TestF(t *testing.T) {
 	t.Run("nil", func(t *testing.T) {
-		_, _, out, reset := Test()
-		defer reset()
+		_, _, out := Test(t)
 
 		var err error
 		F(err) // Will panic if exit is set.
@@ -72,8 +70,7 @@ func TestF(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		exit, _, out, reset := Test()
-		defer reset()
+		exit, _, out := Test(t)
 
 		func() {
 			defer exit.Recover()
