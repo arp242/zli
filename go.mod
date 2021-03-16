@@ -2,4 +2,7 @@ module zgo.at/zli
 
 go 1.13
 
-require golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+require (
+	golang.org/x/sys v0.0.0-20210315160823-c6e025ad8005
+	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d
+)
