@@ -485,35 +485,73 @@ func TestFlags(t *testing.T) {
 
 func TestShiftCommand(t *testing.T) {
 	tests := []struct {
-		in       string
+		in       []string
 		commands []string
 		want     string
 	}{
-		{"", nil, zli.CommandNoneGiven},
-		{"-a", nil, zli.CommandNoneGiven},
+		{[]string{""}, nil, zli.CommandNoneGiven},
+		{[]string{"-a"}, nil, zli.CommandNoneGiven},
 
-		{"help", []string{"asd"}, zli.CommandUnknown},
+		{[]string{"help"}, []string{"asd"}, zli.CommandUnknown},
 
-		{"help", []string{"help", "heee"}, "help"},
-		{"hel", []string{"help", "heee"}, "help"},
-		{"he", []string{"help", "heee"}, zli.CommandAmbiguous},
+		{[]string{"help"}, []string{"help", "heee"}, "help"},
+		{[]string{"hel"}, []string{"help", "heee"}, "help"},
+		{[]string{"he"}, []string{"help", "heee"}, zli.CommandAmbiguous},
 
-		{"usage", []string{"help", "usage=help"}, "help"},
+		{[]string{"usage"}, []string{"help", "usage=help"}, "help"},
+
+		{[]string{"create", "-db=x"}, []string{"create"}, "create"},
+		{[]string{"-flag", "create", "-db=x"}, []string{"create"}, "create"},
+
+		{[]string{"-flag", "create", "-db=x"}, nil, "create"},
 	}
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			f := zli.NewFlags([]string{"test", tt.in})
+			f := zli.NewFlags(append([]string{"prog"}, tt.in...))
+			got := f.ShiftCommand(tt.commands...)
 			f.Bool(false, "a")
 			f.Parse()
 
-			got := f.ShiftCommand(tt.commands...)
 			if got != tt.want {
 				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
 			}
 		})
 	}
 }
+
+/*
+func TestDoubleParse(t *testing.T) {
+	f := zli.NewFlags([]string{"prog", "-global", "cmd", "-other"})
+	f.IgnoreUnknown(true)
+
+	var global = f.Bool(false, "global")
+	{
+		err := f.Parse()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !global.Set() {
+			t.Fatal("global not set")
+		}
+	}
+
+	t.Log(f.Args)
+	f.IgnoreUnknown(false)
+	var other = f.Bool(false, "other")
+	err := f.Parse()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if other.Set() {
+		t.Error("other not set", f.Args)
+	}
+	if len(f.Args) != 1 && f.Args[1] != "cmd" {
+		t.Error(f.Args)
+	}
+}
+*/
 
 // Just to make sure it's not ridiculously slow or anything.
 func BenchmarkFlag(b *testing.B) {

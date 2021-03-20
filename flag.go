@@ -36,7 +36,8 @@ type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
 
-	flags []flagValue
+	flags         []flagValue
+	ignoreUnknown bool
 }
 
 type flagValue struct {
@@ -58,6 +59,10 @@ func NewFlags(args []string) Flags {
 	return f
 }
 
+// func (f *Flags) IgnoreUnknown(v bool) {
+// 	f.ignoreUnknown = v
+// }
+
 // Shift a value from the argument list.
 func (f *Flags) Shift() string {
 	if len(f.Args) == 0 {
@@ -75,12 +80,17 @@ const (
 	CommandUnknown   = "\x02"
 )
 
-// ShiftCommand shifts a value from the argument list, and matches it with the
-// list of commands.
+// ShiftCommand shifts the first non-flag value from the argument list.
 //
-// Commands can be matched as an abbreviation as long as it's unambiguous; if
-// you have "search" and "identify" then "i", "id", etc. will all return
-// "identify".
+// This can work both before or after f.Parse(); this is useful if you want to
+// have different flags for different arguments, and both of these will work:
+//
+//   $ prog -flag cmd
+//   $ prog cmd -flag
+//
+// If cmds is given then it matches commands with this list; commands can be
+// matched as an abbreviation as long as it's unambiguous; if you have "search"
+// and "identify" then "i", "id", etc. will all return "identify".
 //
 // If you have the commands "search" and "see", then "s" or "se" are ambiguous,
 // and it will return the special CommandAmbiguous sentinel value.
@@ -90,11 +100,28 @@ const (
 // It will return CommandNoneGiven if there is no command, and CommandUnknown if
 // the command is not found.
 func (f *Flags) ShiftCommand(cmds ...string) string {
-	cmd := f.Shift()
-	if cmd == "" {
-		return CommandNoneGiven
+	var (
+		pushback []string
+		cmd      string
+	)
+	for {
+		cmd = f.Shift()
+		if cmd == "" {
+			return CommandNoneGiven
+		}
+		if cmd[0] == '-' || strings.ContainsRune(cmd, '=') {
+			pushback = append(pushback, cmd)
+			continue
+		}
+
+		break
 	}
+	f.Args = append(pushback, f.Args...)
 	cmd = strings.ToLower(cmd)
+
+	if len(cmds) == 0 {
+		return cmd
+	}
 
 	var found string
 	for _, c := range cmds {
@@ -106,7 +133,8 @@ func (f *Flags) ShiftCommand(cmds ...string) string {
 			if found != "" {
 				return CommandAmbiguous
 			}
-			if i := strings.IndexRune(c, '='); i > -1 {
+
+			if i := strings.IndexRune(c, '='); i > -1 { // Alias
 				c = c[i+1:]
 			}
 			found = c
@@ -119,7 +147,11 @@ func (f *Flags) ShiftCommand(cmds ...string) string {
 	return found
 }
 
+// Parse the set of flags in f.Args.
 func (f *Flags) Parse() error {
+	// TODO: this should allow calling it twice; this is useful for adding flags
+	// later for subcommands.
+
 	// Modify f.Args to split out grouped boolean values: "prog -ab" becomes
 	// "prog -a -b"
 	args := make([]string, 0, len(f.Args))
@@ -150,6 +182,10 @@ func (f *Flags) Parse() error {
 			}
 		}
 		if !found {
+			if f.ignoreUnknown {
+				args = append(args, arg)
+				continue
+			}
 			return &ErrFlagUnknown{arg}
 		}
 		for _, s := range split {
@@ -180,6 +216,10 @@ func (f *Flags) Parse() error {
 
 		flag, ok := f.match(a)
 		if !ok {
+			if f.ignoreUnknown {
+				p = append(p, a)
+				continue
+			}
 			return &ErrFlagUnknown{a}
 		}
 
