@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"zgo.at/zli/internal/isatty"
+	"golang.org/x/term"
 )
 
 /*
@@ -221,7 +221,7 @@ func ColorHex(h string) Color {
 // still output bold/underline/reverse text for people who don't want colors.
 var WantColor = func() bool {
 	_, ok := os.LookupEnv("NO_COLOR")
-	return os.Getenv("TERM") != "dumb" && isatty.IsTerminal(os.Stdout.Fd()) && !ok
+	return os.Getenv("TERM") != "dumb" && term.IsTerminal(int(os.Stdout.Fd())) && !ok
 }()
 
 // Colorf applies terminal escape codes on the text if WantColor is true.

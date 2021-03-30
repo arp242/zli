@@ -11,8 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"zgo.at/zli/internal/isatty"
-	"zgo.at/zli/internal/terminal"
+	"golang.org/x/term"
 )
 
 var (
@@ -26,10 +25,10 @@ var (
 //
 // TODO: this is a bit tricky now, as we can replace zli.Stdout with something
 // else; checking os.Stdout may not be correct in those cases.
-var IsTerminal = func(fd uintptr) bool { return isatty.IsTerminal(fd) }
+var IsTerminal = func(fd uintptr) bool { return term.IsTerminal(int(fd)) }
 
 // TerminalSize gets the dimensions of the given terminal.
-var TerminalSize = func(fd uintptr) (width, height int, err error) { return terminal.GetSize(int(fd)) }
+var TerminalSize = func(fd uintptr) (width, height int, err error) { return term.GetSize(int(fd)) }
 
 // Program gets the program name from argv.
 func Program() string {
