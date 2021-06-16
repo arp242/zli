@@ -361,6 +361,20 @@ func (f flagFloat64) Float64() float64     { return *f.v }
 func (f flagIntCounter) Int() int          { return *f.v }
 func (f flagStringList) Strings() []string { return *f.v }
 
+// StringsExpanded returns a list of strings, and every string is split on sep.
+//
+// This means that these two are identical:
+//
+//   -skip=foo,bar
+//   -skip=foo -skip=bar
+func (f flagStringList) StringsSplit(sep string) []string {
+	l := make([]string, 0, len(*f.v))
+	for _, ll := range *f.v {
+		l = append(l, strings.Split(ll, sep)...)
+	}
+	return l
+}
+
 func (f flagBool) Set() bool       { return *f.s }
 func (f flagString) Set() bool     { return *f.s }
 func (f flagInt) Set() bool        { return *f.s }
