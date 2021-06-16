@@ -370,7 +370,11 @@ func (f flagStringList) Strings() []string { return *f.v }
 func (f flagStringList) StringsSplit(sep string) []string {
 	l := make([]string, 0, len(*f.v))
 	for _, ll := range *f.v {
-		l = append(l, strings.Split(ll, sep)...)
+		split := strings.Split(ll, sep)
+		for i := range split {
+			split[i] = strings.TrimSpace(split[i])
+		}
+		l = append(l, split...)
 	}
 	return l
 }
