@@ -2,11 +2,8 @@ package zli
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
-
-	"golang.org/x/term"
 )
 
 /*
@@ -210,19 +207,6 @@ func ColorHex(h string) Color {
 	}
 	return ColorModeTrueFg | Color((uint64(rgb[0])|uint64(rgb[1])<<8|uint64(rgb[2])<<16)<<ColorOffsetFg)
 }
-
-// WantColor indicates if the program should output any colors. This is
-// automatically set from from the output terminal and NO_COLOR environment
-// variable.
-//
-// You can override this if the user sets "--color=force" or the like.
-//
-// TODO: maybe expand this a bit with WantMonochrome or some such, so you can
-// still output bold/underline/reverse text for people who don't want colors.
-var WantColor = func() bool {
-	_, ok := os.LookupEnv("NO_COLOR")
-	return os.Getenv("TERM") != "dumb" && term.IsTerminal(int(os.Stdout.Fd())) && !ok
-}()
 
 // Colorf applies terminal escape codes on the text if WantColor is true.
 //

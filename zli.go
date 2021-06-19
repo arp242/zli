@@ -10,8 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"golang.org/x/term"
 )
 
 var (
@@ -20,15 +18,6 @@ var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
 )
-
-// IsTerminal reports if this file descriptor is an interactive terminal.
-//
-// TODO: this is a bit tricky now, as we can replace zli.Stdout with something
-// else; checking os.Stdout may not be correct in those cases.
-var IsTerminal = func(fd uintptr) bool { return term.IsTerminal(int(fd)) }
-
-// TerminalSize gets the dimensions of the given terminal.
-var TerminalSize = func(fd uintptr) (width, height int, err error) { return term.GetSize(int(fd)) }
 
 // Program gets the program name from argv.
 func Program() string {
