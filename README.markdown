@@ -5,6 +5,11 @@ overview of how actual programs look like.
 
 Import as `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
 
+Other packages:
+
+- [arp242.net/termtext](https://github.com/arp242/termtext) – align and wrap text.
+- [arp242.net/acidtab](https://github.com/arp242/acidtab) – print text in tables.
+
 **Readme index**:
 [Utility functions](#utility-functions) ·
 [Flag parsing](#flag-parsing) ·

@@ -28,6 +28,7 @@ func ranges(n ...int) []uint8 {
 }
 
 func main() {
+	zli.WantColor = true
 	bg := len(os.Args) > 1
 	toBg := func(c zli.Color) zli.Color {
 		// TODO: also add something to get a good-looking contrast color:
