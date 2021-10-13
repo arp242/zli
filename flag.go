@@ -32,6 +32,25 @@ func (e ErrFlagInvalid) Error() string {
 
 func (e ErrFlagInvalid) Unwrap() error { return e.err }
 
+// Flags are a set of parsed flags.
+//
+// The rules for parsing are as follows:
+//
+//   - Flags start with one or more '-'s; '-a' and '--a' are identical, as are
+//     '-long' and '--long'.
+//
+//  - Flags are separated with arguments by one space or '='. This is required:
+//    '-vVALUE' is invalid; you must use '-v VALUE' or '-v=VALUE'.
+//
+//  - Single-letter flags can be grouped; '-ab' is identical to '-a -b', and
+//    '-ab VAL' is identical to '-a -b VAL'. "Long" flags cannot be grouped.
+//
+//  - Long flag names take precedence over single-letter ones, e.g. if you
+//    define the flags '-long', '-l', '-o', '-n', and '-g' then '-long' will be
+//    parsed as '-long'.
+//
+//  - Anything that doesn't start with a '-' or follows '--' is treated as a
+//    positional argument. This can be freely interspersed with flags.
 type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
@@ -156,11 +175,6 @@ func (f *Flags) Parse() error {
 			continue
 		}
 
-		if len(strings.TrimLeft(arg, "-")) <= 1 {
-			args = append(args, arg)
-			continue
-		}
-
 		_, ok := f.match(arg)
 		if ok {
 			args = append(args, arg)
@@ -176,7 +190,7 @@ func (f *Flags) Parse() error {
 				break
 			}
 		}
-		// Special case for "-arg -42"; we reject unknown flags later.
+		// "-arg -42"; we reject unknown flags later.
 		if !found {
 			args = append(args, arg)
 			continue

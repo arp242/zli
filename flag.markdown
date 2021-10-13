@@ -9,7 +9,8 @@ The Go standard package has some annoying properties:
 
   I don't really like that. If I write `foo bar` then I want to be able to
   quickly add `-v` as `foo bar -v` without having to edit the commandline to put
-  it as `foo -v bar`.
+  it as `foo -v bar`. Tools like "go test" contain some special hackery  to work
+  around this, so "go test -v" works.
 
   You can still use `--` if you want to stop flag parsing: `foo -- bar -v`.
 

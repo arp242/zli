@@ -426,18 +426,39 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 
-		// TODO: this should probably throw an error as ambiguous?
-		{"ambiguous", []string{"prog", "-ab", "x"},
+		{"prefer_long", []string{"prog", "-long"},
 			func(f *zli.Flags) []interface{} {
 				return []interface{}{
-					f.String("", "ab"),
-					f.Bool(false, "a"),
-					f.Bool(false, "b"),
+					f.Bool(false, "long"),
+					f.Bool(false, "l"),
+					f.Bool(false, "o"),
+					f.Bool(false, "n"),
+					f.Bool(false, "g"),
 				}
 			}, `
-				string 1 → "x"
+				bool 1 → true
 				bool 2 → false
 				bool 3 → false
+				bool 4 → false
+				bool 5 → false
+				args   → 0 []
+			`, ""},
+
+		{"prefer_long", []string{"prog", "-long"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.Bool(false, "l"),
+					f.Bool(false, "o"),
+					f.Bool(false, "long"),
+					f.Bool(false, "n"),
+					f.Bool(false, "g"),
+				}
+			}, `
+				bool 1 → false
+				bool 2 → false
+				bool 3 → true
+				bool 4 → false
+				bool 5 → false
 				args   → 0 []
 			`, ""},
 	}
