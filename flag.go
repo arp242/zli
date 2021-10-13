@@ -36,8 +36,7 @@ type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
 
-	flags         []flagValue
-	ignoreUnknown bool
+	flags []flagValue
 }
 
 type flagValue struct {
@@ -58,10 +57,6 @@ func NewFlags(args []string) Flags {
 	}
 	return f
 }
-
-// func (f *Flags) IgnoreUnknown(v bool) {
-// 	f.ignoreUnknown = v
-// }
 
 // Shift a value from the argument list.
 func (f *Flags) Shift() string {
@@ -181,12 +176,10 @@ func (f *Flags) Parse() error {
 				break
 			}
 		}
+		// Special case for "-arg -42"; we reject unknown flags later.
 		if !found {
-			if f.ignoreUnknown {
-				args = append(args, arg)
-				continue
-			}
-			return &ErrFlagUnknown{arg}
+			args = append(args, arg)
+			continue
 		}
 		for _, s := range split {
 			args = append(args, "-"+s)
@@ -216,10 +209,6 @@ func (f *Flags) Parse() error {
 
 		flag, ok := f.match(a)
 		if !ok {
-			if f.ignoreUnknown {
-				p = append(p, a)
-				continue
-			}
 			return &ErrFlagUnknown{a}
 		}
 

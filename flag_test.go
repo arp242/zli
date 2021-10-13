@@ -414,6 +414,18 @@ func TestFlags(t *testing.T) {
 				args   → 0 []
 			`, ""},
 
+		{"arguments starting with - work", []string{"prog", "-b", "-arg", "--long", "--long"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.String("", "b"),
+					f.String("", "l", "long"),
+				}
+			}, `
+				string 1 → "-arg"
+				string 2 → "--long"
+				args     → 0 []
+			`, ""},
+
 		// TODO: this should probably throw an error as ambiguous?
 		{"ambiguous", []string{"prog", "-ab", "x"},
 			func(f *zli.Flags) []interface{} {
