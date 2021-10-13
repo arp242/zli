@@ -40,25 +40,25 @@ func main() {
 	}
 
 	fmt.Print("Attributes:  ")
-	fmt.Print("Bold       ", zli.Colorf("XX", zli.Bold), " ")
-	fmt.Print("Faint   ", zli.Colorf("XX", zli.Faint), " ")
-	fmt.Print("Italic    ", zli.Colorf("XX", zli.Italic), " ")
-	fmt.Print("Underline  ", zli.Colorf("XX", zli.Underline), " ")
-	fmt.Print("BlinkSlow ", zli.Colorf("XX", zli.BlinkSlow), " ")
+	fmt.Print("Bold       ", zli.Colorize("XX", zli.Bold), " ")
+	fmt.Print("Faint   ", zli.Colorize("XX", zli.Faint), " ")
+	fmt.Print("Italic    ", zli.Colorize("XX", zli.Italic), " ")
+	fmt.Print("Underline  ", zli.Colorize("XX", zli.Underline), " ")
+	fmt.Print("BlinkSlow ", zli.Colorize("XX", zli.BlinkSlow), " ")
 	fmt.Print("\n             ")
-	fmt.Print("BlinkRapid ", zli.Colorf("XX", zli.BlinkRapid), " ")
-	fmt.Print("Reverse ", zli.Colorf("XX", zli.ReverseVideo), " ")
-	fmt.Print("Concealed ", zli.Colorf("XX", zli.Concealed), " ")
-	fmt.Print("CrossedOut ", zli.Colorf("XX", zli.CrossedOut), " ")
+	fmt.Print("BlinkRapid ", zli.Colorize("XX", zli.BlinkRapid), " ")
+	fmt.Print("Reverse ", zli.Colorize("XX", zli.ReverseVideo), " ")
+	fmt.Print("Concealed ", zli.Colorize("XX", zli.Concealed), " ")
+	fmt.Print("CrossedOut ", zli.Colorize("XX", zli.CrossedOut), " ")
 
 	fmt.Print("\n\nStandard colors:       ")
 	for i, c := range std {
-		fmt.Print(zli.Colorf(fmt.Sprintf("%-3d", i), toBg(c)))
+		zli.Colorf("%-3d", toBg(c), i)
 	}
 
 	fmt.Print("\nStandard colors (256): ")
 	for i := uint8(0); i <= 16; i++ {
-		fmt.Print(zli.Colorf(fmt.Sprintf("%-3d", i), toBg(zli.Color256(i))))
+		zli.Colorf("%-3d", toBg(zli.Color256(i)), i)
 	}
 
 	fmt.Print("\n\n")
@@ -67,13 +67,13 @@ func main() {
 		if i > 16 && (i-16)%18 == 0 {
 			fmt.Println("")
 		}
-		fmt.Print(zli.Colorf(fmt.Sprintf("%-4d", i), toBg(zli.Color256(i))))
+		zli.Colorf("%-4d", toBg(zli.Color256(i)), i)
 	}
 	for _, i := range ranges(34, 51, 70, 87, 106, 123, 142, 159, 178, 195, 214, 231) {
 		if i > 16 && (i-16)%18 == 0 {
 			fmt.Println("")
 		}
-		fmt.Print(zli.Colorf(fmt.Sprintf("%-4d", i), toBg(zli.Color256(i))))
+		zli.Colorf("%-4d", toBg(zli.Color256(i)), i)
 	}
 
 	fmt.Print("\nGrey-tones: ")
@@ -81,7 +81,7 @@ func main() {
 		if i == 244 {
 			fmt.Print("\n            ")
 		}
-		fmt.Print(zli.Colorf(fmt.Sprintf("%-4d", i), toBg(zli.Color256(uint8(i)))))
+		zli.Colorf("%-4d", toBg(zli.Color256(uint8(i))), i)
 	}
 	fmt.Printf("\n\nRun as '%s bg' to set background instead of foreground.\n", zli.Program())
 }

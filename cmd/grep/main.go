@@ -149,9 +149,9 @@ func main() {
 			for i := len(match) - 1; i >= 0; i-- {
 				m := match[i]
 				if only.Set() {
-					l = zli.Colorf(l[m[0]:m[1]], colorMatch)
+					l = zli.Colorize(l[m[0]:m[1]], colorMatch)
 				} else {
-					l = l[:m[0]] + zli.Colorf(l[m[0]:m[1]], colorMatch) + l[m[1]:]
+					l = l[:m[0]] + zli.Colorize(l[m[0]:m[1]], colorMatch) + l[m[1]:]
 				}
 			}
 
@@ -161,7 +161,7 @@ func main() {
 					fmt.Fprint(zli.Stdout, path, ":")
 				} else if !shownPath {
 					// Print file path as a header once on interactive terminals.
-					fmt.Fprintln(zli.Stdout, zli.Colorf(path, colorPath))
+					zli.Colorln(path, colorPath)
 					shownPath = true
 				}
 			}
@@ -171,7 +171,7 @@ func main() {
 			// zli.PagerStdout() works: everything is written to a buffer and
 			// displayed when we're done.
 			fmt.Fprintln(zli.Stdout,
-				zli.Colorf(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)
+				zli.Colorize(strconv.FormatInt(lineNr, 10), colorLineNr)+":"+l)
 		}
 	}
 

@@ -12,19 +12,24 @@ func ExampleColor() {
 	zli.Stdout = os.Stdout
 	zli.Colorln("You're looking rather red", zli.Red) // Apply a color.
 	zli.Colorln("A bold move", zli.Bold)              // Or an attribute.
-	zli.Colorln("Tomato", zli.Red.Bg())               // Transform to background color.
+
+	zli.Colorln("Tomato", zli.Red.Bg()) // Transform to background color.
 
 	zli.Colorln("Wow, such beautiful text", // Can be combined.
 		zli.Bold|zli.Underline|zli.Red|zli.Green.Bg())
 
-	zli.Colorln("Contrast ratios is for suckers", // 256 color
+	zli.Colorln("Contrast ratios is for suckers (and web devs)", // 256 color
 		zli.Color256(56)|zli.Color256(99).Bg())
 
 	zli.Colorln("REAL men use TRUE color!", // True color
 		zli.ColorHex("#678")|zli.ColorHex("#abc").Bg())
 
-	fmt.Println(zli.Red|zli.Bold, "red!") // Set colors "directly"
-	fmt.Println("and bold!", zli.Reset)
+	zli.Colorf("Hello, %s!\n", zli.Red, "Mars") // Like fmt.Printf
+
+	smurf := zli.Colorize("Smurfs!", zli.Blue) // Colorize a string (don't print)
+	fmt.Println(smurf)
+
+	// .String() method outputs escape sequence
 	fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
 
 	// Output:
@@ -32,10 +37,10 @@ func ExampleColor() {
 	// [1mA bold move[0m
 	// [41mTomato[0m
 	// [1;4;31;42mWow, such beautiful text[0m
-	// [38;5;56;48;5;99mContrast ratios is for suckers[0m
+	// [38;5;56;48;5;99mContrast ratios is for suckers (and web devs)[0m
 	// [38;2;102;119;136;48;2;170;187;204mREAL men use TRUE color![0m
-	// [1;31m red!
-	// and bold! [0m
+	// [31mHello, Mars!
+	// [0m[34mSmurfs![0m
 	// [31mc[35mo[36ml[34mo[33mr[0m
 }
 
@@ -80,11 +85,11 @@ func TestColor(t *testing.T) {
 			t.Run("WantColor=false", func(t *testing.T) {
 				got := tt.in.String()
 				if got != "" {
-					t.Errorf("Colorf WantColor not respected? got: %q", got)
+					t.Errorf("Colorize WantColor not respected? got: %q", got)
 				}
-				got = zli.Colorf("Hello", tt.in)
+				got = zli.Colorize("Hello", tt.in)
 				if got != "Hello" {
-					t.Errorf("Colorf WantColor not respected? got: %q", got)
+					t.Errorf("Colorize WantColor not respected? got: %q", got)
 				}
 			})
 
@@ -96,15 +101,15 @@ func TestColor(t *testing.T) {
 				}
 			})
 
-			t.Run("Colorf", func(t *testing.T) {
-				got := zli.Colorf("Hello", tt.in)
+			t.Run("Colorize", func(t *testing.T) {
+				got := zli.Colorize("Hello", tt.in)
 				if got != tt.want+"Hello\x1b[0m" {
-					t.Errorf("Colorf()\ngot:  %q → %[1]s\nwant: %q → %[2]s", got, tt.want)
+					t.Errorf("Colorize()\ngot:  %q → %[1]s\nwant: %q → %[2]s", got, tt.want)
 				}
 			})
 
 			t.Run("DeColor", func(t *testing.T) {
-				got := zli.Colorf("Hello", tt.in)
+				got := zli.Colorize("Hello", tt.in)
 				de := zli.DeColor(got)
 				if de != "Hello" {
 					t.Errorf("DeColor: %q", de)
@@ -128,7 +133,7 @@ func TestColor(t *testing.T) {
 			t.Errorf("Color.String()\ngot:  %q\nwant: %q", got, "\x1b[0m")
 		}
 
-		got = zli.Colorf("Hello", c)
+		got = zli.Colorize("Hello", c)
 		if got != "Hello" {
 			t.Errorf("Color.String()\ngot:  %q\nwant: %q", got, "Hello")
 		}
@@ -156,8 +161,8 @@ func TestColor(t *testing.T) {
 					t.Errorf("%q", got)
 				}
 			})
-			t.Run("Colorf()", func(t *testing.T) {
-				got := zli.Colorf("Hello", tt)
+			t.Run("Colorize()", func(t *testing.T) {
+				got := zli.Colorize("Hello", tt)
 				want := "(zli.Color ERROR invalid hex color)Hello"
 				if got != want {
 					t.Errorf("\ngot:  %q\nwant: %q", got, want)
@@ -173,7 +178,7 @@ func BenchmarkColor(b *testing.B) {
 
 	b.ReportAllocs()
 	for n := 0; n < b.N; n++ {
-		s = zli.Colorf("Hello", c)
+		s = zli.Colorize("Hello", c)
 	}
 	_ = s
 }

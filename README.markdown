@@ -13,7 +13,7 @@ Other packages:
 **Readme index**:
 [Utility functions](#utility-functions) ·
 [Flag parsing](#flag-parsing) ·
-[Colours](#colours) ·
+[Colors](#colors) ·
 [Testing](#testing)
 
 
@@ -207,14 +207,15 @@ See the grep example.
 ### Colors
 
 You can add colors and some other text attributes to a string with
-`zli.Colorf()`, which returns a modified string with the terminal escape codes,
+`zli.Colorize()`, which returns a modified string with the terminal escape codes,
 ending with reset.
 
 It won't do anything if `zli.WantColor` is `false`; this is disabled by default
 if the output isn't a terminal or `NO_COLOR` is set, but you can override it if
 the user sets `--color=force` or something.
 
-`zli.Colorln()` is a convenience wrapper for `fmt.Println(zli.Colorf(..))`.
+`zli.Colorln()` and `zli.Colorf()` are convenience wrappers for `fmt.Println()`
+and `fmt.Printf()` with colors.
 
 There are constants for the basic terminal attributes and 16-color palette which
 may be combined freely by adding them together:

@@ -1,3 +1,4 @@
+//go:build !no_term
 // +build !no_term
 
 package zli
@@ -34,6 +35,9 @@ var WantColor = func() bool {
 }()
 
 // AskPassword interactively asks the user for a password and confirmation.
+//
+// Just a convenient wrapper for term.ReadPassword() to call it how you want to
+// use it much of the time to ask for a new password.
 func AskPassword(minlen int) (string, error) {
 start:
 	fmt.Fprintf(Stdout, "Enter password for new user (will not echo): ")

@@ -208,10 +208,10 @@ func ColorHex(h string) Color {
 	return ColorModeTrueFg | Color((uint64(rgb[0])|uint64(rgb[1])<<8|uint64(rgb[2])<<16)<<ColorOffsetFg)
 }
 
-// Colorf applies terminal escape codes on the text if WantColor is true.
+// Colorize the text with a color if WantColor is true.
 //
 // The text will end with the reset code.
-func Colorf(text string, c Color) string {
+func Colorize(text string, c Color) string {
 	if c == Reset {
 		return text
 	}
@@ -226,10 +226,16 @@ func Colorf(text string, c Color) string {
 	return attrs + text + Reset.String()
 }
 
+// Colorf prints colorized output if WantColor is true.
+//
+// The text will end with the reset code. Note that this is always added at the
+// end, after any newlines in the string.
+func Colorf(format string, c Color, a ...interface{}) { fmt.Fprintf(Stdout, Colorize(format, c), a...) }
+
 // Colorln prints colorized output if WantColor is true.
 //
 // The text will end with the reset code.
-func Colorln(text string, c Color) { fmt.Fprintln(Stdout, Colorf(text, c)) }
+func Colorln(text string, c Color) { fmt.Fprintln(Stdout, Colorize(text, c)) }
 
 // DeColor removes ANSI color escape sequences from a string.
 func DeColor(text string) string {

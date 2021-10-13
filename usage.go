@@ -64,14 +64,14 @@ func Usage(opts int, text string) string {
 		split := strings.Split(text, "\n")
 		for i := range split {
 			if reHeader.MatchString(split[i]) && (i == 0 || split[i-1] == "") {
-				split[i] = Colorf(split[i], FormatHeader)
+				split[i] = Colorize(split[i], FormatHeader)
 			}
 		}
 		text = strings.Join(split, "\n")
 	}
 
 	if opts&UsageFlags != 0 {
-		text = reFlags.ReplaceAllString(text, Colorf(`$0`, FormatFlag))
+		text = reFlags.ReplaceAllString(text, Colorize(`$0`, FormatFlag))
 	}
 
 	return text
