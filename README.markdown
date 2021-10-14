@@ -3,7 +3,7 @@ escape codes, various helpful utility functions, and makes testing fairly easy.
 There's a little example at [cmd/grep](cmd/grep), which should give a decent
 overview of how actual programs look like.
 
-Import as `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
+Import as `zgo.at/zli`; API docs: https://godocs.io/zgo.at/zli
 
 Other packages:
 
@@ -14,6 +14,7 @@ Other packages:
 [Utility functions](#utility-functions) ·
 [Flag parsing](#flag-parsing) ·
 [Colors](#colors) ·
+[Terminal control](#terminal-control) ·
 [Testing](#testing)
 
 
@@ -104,18 +105,6 @@ func main() {
     zli.Exit(1)
 }
 ```
-
-zli helpfully includes the [go-isatty][isatty] and `GetSize()` from
-[x/crypto/ssh/terminal][ssh] as they're so commonly used:
-
-```go
-interactive := zli.IsTerminal(os.Stdout.Fd())  // Check if stdout is a terminal.
-w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
-```
-
-[isatty]: https://github.com/mattn/go-isatty/
-[ssh]: https://godoc.org/golang.org/x/crypto/ssh/terminal#GetSize
-
 
 ### Flag parsing
 
@@ -285,6 +274,48 @@ sets the flag to signal how to interpret it.
 
 Do you really want to do this just to create a `const` instead of a `var`?
 Probably not 😅
+
+### Terminal control
+
+A set of "simple" CSI escape sequences:
+
+```go
+interactive := zli.IsTerminal(os.Stdout.Fd())  // Check if stdout is a terminal.
+w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
+
+EraseLine()
+ReplaceLine(a ...interface{})
+ReplaceLinef(s string, a ...interface{})
+ClearScreen()
+CursorSet(row, col int)
+CursorShow(show bool)
+CursorMove(n int, dir Direction)
+
+CursorPosition() (int, int, error)
+
+pw, err := AskPassword()                       // Ask password with confirmation.
+```
+
+These should always work, regardless of the terminal mode. The exception is
+`CursorPosition()`, which needs to (temporarily) put the terminal in raw mode to
+read the reply. This is done automatically.
+
+This doesn't use any terminfo database; it's assumed that your terminal will
+understand standard VT220/ANSI escape sequences. Checking the terminfo database,
+there are very few modern ones that don't, so it should be fine.
+
+#### Raw mode and input processing.
+
+This is a much more low-level alternative to [termbox] or [tcell], but still a
+bit higher-level than [golang.org/x/term].
+
+It's useful if you want a bit of control over the terminal, but don't want/need
+a full-blown "Terminal user interface" (although you could build that on top of
+this, if you wanted).
+
+[termbox]: https://github.com/nsf/termbox-go
+[tcell]: https://github.com/gdamore/tcell
+[golang.org/x/term]: https://golang.org/x/term
 
 
 ### Testing

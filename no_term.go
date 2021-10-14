@@ -12,4 +12,6 @@ var (
 	WantColor    = true
 )
 
-func AskPassword(minlen int) (string, error) { panic("not implemented; compiled with no_term flag") }
+func AskPassword(minlen int) (string, error)   { panic("not implemented; compiled with no_term flag") }
+func RawTerminal(fd int) (func() error, error) { panic("not implemented; compiled with no_term flag") }
+func CursorPosition() (int, int, error)        { panic("not implemented; compiled with no_term flag") }
