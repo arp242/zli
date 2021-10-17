@@ -3,12 +3,13 @@ escape codes, various helpful utility functions, and makes testing fairly easy.
 There's a little example at [cmd/grep](cmd/grep), which should give a decent
 overview of how actual programs look like.
 
-Import as `zgo.at/zli`; API docs: https://pkg.go.dev/zgo.at/zli
+Import as `zgo.at/zli`; API docs: https://godocs.io/zgo.at/zli
 
 Other packages:
 
 - [arp242.net/termtext](https://github.com/arp242/termtext) – align and wrap text.
-- [arp242.net/acidtab](https://github.com/arp242/acidtab) – print text in tables.
+- [arp242.net/acidtab](https://github.com/arp242/acidtab)   – print text in tables.
+- [zgo.at/termfo](https://github.com/arp242/termfo)         – read and use terminfo.
 
 **Readme index**:
 [Utility functions](#utility-functions) ·
