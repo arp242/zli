@@ -56,7 +56,7 @@ func TestColor(t *testing.T) {
 
 		// Color boundaries (first and last).
 		{zli.Black | zli.Black.Bg(), "\x1b[30;40m"},
-		{zli.BrightWhite | zli.BrightWhite.Bg(), "\x1b[97;107m"},
+		{zli.White.Brighten(1) | zli.White.Brighten(1).Bg(), "\x1b[97;107m"},
 
 		{zli.Color256(0) | zli.Color256(0).Bg(), "\x1b[38;5;0;48;5;0m"},
 		{zli.Color256(255) | zli.Color256(255).Bg(), "\x1b[38;5;255;48;5;255m"},
@@ -69,7 +69,7 @@ func TestColor(t *testing.T) {
 		{zli.Red | zli.Underline, "\x1b[4;31m"},
 		{zli.Green.Bg(), "\x1b[42m"},
 		{zli.Green.Bg() | zli.Bold, "\x1b[1;42m"},
-		{zli.BrightGreen.Bg() | zli.Red, "\x1b[31;102m"},
+		{zli.Green.Bg().Brighten(1) | zli.Red, "\x1b[31;102m"},
 		{zli.Color256(99) | zli.Red.Bg() | zli.Bold | zli.Underline, "\x1b[1;4;38;5;99;41m"},
 
 		{zli.Bold | zli.Faint | zli.Italic | zli.Underline | zli.BlinkSlow | zli.BlinkRapid | zli.ReverseVideo | zli.Concealed | zli.CrossedOut,

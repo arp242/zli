@@ -246,6 +246,14 @@ zli.Colorln("REAL men use TRUE color!",               // True color.
     zli.ColorHex("#fff") | zli.ColorHex("#00f").Bg())
 ```
 
+With `Brighten()` you can change the brightness of a color:
+
+```go
+zli.Colorln("Brighter! BRIGHTER!", zli.Color256(99).Brighten(1))
+zli.Colorln("Dim the lights.              // Negative values darken.
+    zli.ColorHex("#655199").Brighten(-40))
+```
+
 See [cmd/colortest/main.go](cmd/colortest/main.go) for a little program to
 display and test colors.
 

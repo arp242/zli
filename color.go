@@ -2,6 +2,7 @@ package zli
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -35,7 +36,7 @@ const (
 	ColorOffsetBg = 40
 )
 
-// Mask anything that's not a foreground or background colour.
+// Mask anything that's not a foreground or background color.
 const (
 	maskFg Color = (256*256*256 - 1) << ColorOffsetFg
 	maskBg Color = maskFg << (ColorOffsetBg - ColorOffsetFg)
@@ -71,7 +72,7 @@ const (
 	ColorModeTrueBg
 )
 
-// First 16 colors.
+// First 8 colors; use Brighten(1) to get the bright variants.
 const (
 	Black Color = (iota << ColorOffsetFg) | ColorMode16Fg
 	Red
@@ -81,14 +82,6 @@ const (
 	Magenta
 	Cyan
 	White
-	BrightBlack
-	BrightRed
-	BrightGreen
-	BrightYellow
-	BrightBlue
-	BrightMagenta
-	BrightCyan
-	BrightWhite
 )
 
 // Bg returns the background variant of this color. If doesn't do anything if
@@ -102,6 +95,108 @@ func (c Color) Bg() Color {
 		c ^= ColorModeTrueFg | ColorModeTrueBg
 	}
 	return (c &^ maskFg) | (c & maskFg << 24)
+}
+
+// Brighten or darken (for negative values) a color.
+//
+// Operations will never go out-of-bounds; brighting the brightest variant will
+// do nothing and will simply return the same color.
+//
+// For 16 colors it will convert a normal color to a "bright" variant, or vice versa.
+//
+// For 256 colors it will shift to the same column position in the next
+// "square"; see the chart printed by ./cmd/colortest. The scale of n is 6.
+//
+// For true colors it will brighten the color; the scale of n is 255.
+func (c Color) Brighten(n int) Color {
+	if n == 0 {
+		return c
+	}
+
+	mask, off := maskFg, ColorOffsetFg
+	if c&ColorMode16Bg != 0 || c&ColorMode256Bg != 0 || c&ColorModeTrueBg != 0 {
+		mask, off = maskBg, ColorOffsetBg
+	}
+	keep := c &^ mask
+	cc := c & mask >> off
+
+	switch {
+	case c&ColorMode16Fg != 0 || c&ColorMode16Bg != 0:
+		if n > 0 {
+			cc |= 8
+		} else {
+			cc &^= 8
+		}
+
+	case c&ColorMode256Fg != 0 || c&ColorMode256Bg != 0:
+		switch {
+		// First 16 (starting at 0) are the same as 16 color.
+		case cc <= 15:
+			if n > 0 {
+				cc |= 8
+			} else {
+				cc &^= 8
+			}
+		// 232-255 are grayscale.
+		case cc >= 232:
+			cc = clamp(int(cc)+n, 232, 255)
+		// Move to same square in next cube; see ./cmd/colortest
+		default:
+			col := int(15+cc) % 6
+			if col == 0 {
+				col = 6
+			}
+			row := int(math.Ceil(float64(cc-15) / 36))
+			if row == 0 {
+				row = 1
+			}
+			// TODO: this seems ... too complicated...
+			max := 15 + (row*30 + ((row - 1) * 6)) + col
+			min := max - 30
+			//fmt.Printf("%d×%d max=%d; min=%d\n", row, col, max, min)
+
+			cc = clamp(int(cc)+n*6, min, max)
+		}
+	case c&ColorModeTrueFg != 0 || c&ColorModeTrueBg != 0:
+		//mod := math.Round(float64(n*3) * 1 / 3)
+		or, og, ob := int(cc%256), int(cc>>8%256), int(cc>>16%256)
+		r, g, b := or+n, og+n, ob+n
+
+		if r > 255 {
+			s := 255 - or
+			r, g, b = 255, clampC(og+s, 0, 255), clampC(ob+s, 0, 255)
+		} else if g > 255 {
+			s := 255 - or
+			r, g, b = clampC(or+s, 0, 255), 255, clampC(ob+s, 0, 255)
+		} else if b > 255 {
+			s := 255 - or
+			r, g, b = clampC(or+s, 0, 255), clampC(og+s, 0, 255), 255
+		} else if r < 0 {
+			s := -or
+			r, g, b = 0, clampC(og+s, 0, 255), clampC(ob+s, 0, 255)
+		} else if g < 0 {
+			s := -og
+			r, g, b = clampC(or+s, 0, 255), 0, clampC(ob+s, 0, 255)
+		} else if b < 0 {
+			s := -ob
+			r, g, b = clampC(or+s, 0, 255), clampC(og+s, 0, 255), 0
+		}
+
+		cc = Color(r) + Color(g)<<8 + Color(b)<<16
+	}
+
+	return keep | (cc << off)
+}
+
+func clampC(c, min, max int) int { return int(clamp(c, min, max)) }
+func clamp(c, min, max int) Color {
+	if c < min {
+		return Color(min)
+	}
+	if c > max {
+		return Color(max)
+	}
+	return Color(c)
 }
 
 // String gets the escape sequence for this color code.
@@ -133,7 +228,7 @@ func (c Color) String() string {
 	switch {
 	case c&ColorMode16Fg != 0:
 		cc := c&maskFg>>ColorOffsetFg + 30
-		if cc > 37 {
+		if cc > 37 { // Bright colors
 			cc += 52
 		}
 		attrs = append(attrs, strconv.FormatUint(uint64(cc), 10))
@@ -150,7 +245,7 @@ func (c Color) String() string {
 	switch {
 	case c&ColorMode16Bg != 0:
 		cc := c>>ColorOffsetBg + 40
-		if cc > 47 {
+		if cc > 47 { // Bright colors
 			cc += 52
 		}
 		attrs = append(attrs, strconv.FormatUint(uint64(cc), 10))
