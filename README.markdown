@@ -7,9 +7,9 @@ Import as `zgo.at/zli`; API docs: https://godocs.io/zgo.at/zli
 
 Other packages:
 
-- [arp242.net/termtext](https://github.com/arp242/termtext) – align and wrap text.
-- [arp242.net/acidtab](https://github.com/arp242/acidtab)   – print text in tables.
-- [zgo.at/termfo](https://github.com/arp242/termfo)         – read and use terminfo.
+- [zgo.at/termtext](https://github.com/arp242/termtext) – align and wrap text.
+- [zgo.at/acidtab](https://github.com/arp242/acidtab)   – print text in tables.
+- [zgo.at/termfo](https://github.com/arp242/termfo)     – read and use terminfo.
 
 **Readme index**:
 [Utility functions](#utility-functions) ·
