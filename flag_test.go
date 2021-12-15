@@ -232,6 +232,13 @@ func TestFlags(t *testing.T) {
 				list 1 → [a b c]
 				args   → 0 []
 			`, ""},
+		{"intlist", []string{"prog", "-s", "1", "-s", "3", "-s", "5"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.IntList(nil, "s")}
+			}, `
+				list 1 → [1 3 5]
+				args   → 0 []
+			`, ""},
 
 		// Various kinds of wrong input.
 		{"unknown", []string{"prog", "-x"},
@@ -470,6 +477,7 @@ func TestFlags(t *testing.T) {
 		int64er      interface{ Int64() int64 }
 		floater      interface{ Float64() float64 }
 		stringlister interface{ Strings() []string }
+		intlister    interface{ Ints() []int }
 	)
 
 	for _, tt := range tests {
@@ -496,6 +504,8 @@ func TestFlags(t *testing.T) {
 					out += fmt.Sprintf("float64 %d → %f\n", i+1, ff.Float64())
 				case stringlister:
 					out += fmt.Sprintf("list %d → %v\n", i+1, ff.Strings())
+				case intlister:
+					out += fmt.Sprintf("list %d → %v\n", i+1, ff.Ints())
 				default:
 					t.Fatalf("unknown type: %T", f)
 				}

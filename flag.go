@@ -243,7 +243,7 @@ func (f *Flags) Parse() error {
 		// and multiSetter.
 		if set := flag.value.(setter); set.Set() {
 			switch flag.value.(type) {
-			case flagIntCounter, flagStringList, flagBool: // Not an error.
+			case flagIntCounter, flagStringList, flagIntList, flagBool: // Not an error.
 			default:
 				return &ErrFlagDouble{a}
 			}
@@ -296,6 +296,22 @@ func (f *Flags) Parse() error {
 			n, s := next()
 			*v.s = s
 			*v.v = append(*v.v, n)
+		case flagIntList:
+			if !*v.s {
+				*v.v = nil
+			}
+
+			n, s := next()
+			x, err := strconv.ParseInt(n, 0, 64)
+			if err != nil {
+				if nErr := errors.Unwrap(err); nErr != nil {
+					err = nErr
+				}
+				return ErrFlagInvalid{a, err, "number"}
+			}
+
+			*v.s = s
+			*v.v = append(*v.v, int(x))
 		}
 		if err != nil {
 			return fmt.Errorf("%s: %s", a, err)
@@ -346,6 +362,10 @@ type (
 		v *[]string
 		s *bool
 	}
+	flagIntList struct {
+		v *[]int
+		s *bool
+	}
 )
 
 func (f flagBool) Pointer() *bool           { return f.v }
@@ -355,6 +375,7 @@ func (f flagInt64) Pointer() *int64         { return f.v }
 func (f flagFloat64) Pointer() *float64     { return f.v }
 func (f flagIntCounter) Pointer() *int      { return f.v }
 func (f flagStringList) Pointer() *[]string { return f.v }
+func (f flagIntList) Pointer() *[]int       { return f.v }
 
 func (f flagBool) Bool() bool              { return *f.v }
 func (f flagString) String() string        { return *f.v }
@@ -363,6 +384,7 @@ func (f flagInt64) Int64() int64           { return *f.v }
 func (f flagFloat64) Float64() float64     { return *f.v }
 func (f flagIntCounter) Int() int          { return *f.v }
 func (f flagStringList) Strings() []string { return *f.v }
+func (f flagIntList) Ints() []int          { return *f.v }
 
 // StringsExpanded returns a list of strings, and every string is split on sep.
 //
@@ -389,6 +411,7 @@ func (f flagInt64) Set() bool      { return *f.s }
 func (f flagFloat64) Set() bool    { return *f.s }
 func (f flagIntCounter) Set() bool { return *f.s }
 func (f flagStringList) Set() bool { return *f.s }
+func (f flagIntList) Set() bool    { return *f.s }
 
 func (f *Flags) append(v interface{}, n string, a ...string) {
 	f.flags = append(f.flags, flagValue{value: v, names: append([]string{n}, a...)})
@@ -427,6 +450,12 @@ func (f *Flags) IntCounter(def int, name string, aliases ...string) flagIntCount
 
 func (f *Flags) StringList(def []string, name string, aliases ...string) flagStringList {
 	v := flagStringList{v: &def, s: new(bool)}
+	f.append(v, name, aliases...)
+	return v
+}
+
+func (f *Flags) IntList(def []int, name string, aliases ...string) flagIntList {
+	v := flagIntList{v: &def, s: new(bool)}
 	f.append(v, name, aliases...)
 	return v
 }
