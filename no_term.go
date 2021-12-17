@@ -1,6 +1,3 @@
-//go:build no_term
-// +build no_term
-
 // This file contains shims to prevent depending on x/term (and by extension,
 // x/sys). Especially x/sys is fairly large, and makes vendoring zli tricky.
 
