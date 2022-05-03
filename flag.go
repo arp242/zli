@@ -88,11 +88,20 @@ func (f *Flags) Shift() string {
 }
 
 // Sentinel return values for ShiftCommand()
-const (
-	CommandNoneGiven = "\x00"
-	CommandAmbiguous = "\x01"
-	CommandUnknown   = "\x02"
+type (
+	ErrCommandNoneGiven struct{}
+	ErrCommandUnknown   string
+	ErrCommandAmbiguous struct {
+		Cmd  string
+		Opts []string
+	}
 )
+
+func (e ErrCommandNoneGiven) Error() string { return "no command given" }
+func (e ErrCommandUnknown) Error() string   { return fmt.Sprintf("unknown command: %q", string(e)) }
+func (e ErrCommandAmbiguous) Error() string {
+	return fmt.Sprintf(`ambigious command: %q; matches: "%s"`, e.Cmd, strings.Join(e.Opts, `", "`))
+}
 
 // ShiftCommand shifts the first non-flag value from the argument list.
 //
@@ -104,25 +113,15 @@ const (
 //
 // If cmds is given then it matches commands with this list; commands can be
 // matched as an abbreviation as long as it's unambiguous; if you have "search"
-// and "identify" then "i", "id", etc. will all return "identify".
-//
-// If you have the commands "search" and "see", then "s" or "se" are ambiguous,
-// and it will return the special CommandAmbiguous sentinel value.
+// and "identify" then "i", "id", etc. will all return "identify". If you have
+// the commands "search" and "see", then "s" or "se" are ambiguous, and it will
+// return an ErrCommandAmbiguous error.
 //
 // Commands can also contain aliases as "alias=cmd"; for example "ci=commit".
 //
-// It will return CommandNoneGiven if there is no command, and CommandUnknown if
-// the command is not found.
-func (f *Flags) ShiftCommand(cmds ...string) string {
-	// TODO: change the way this works; returning the sentinal values is
-	// actually annoying.
-	//
-	// Instead change it to:
-	//
-	//   ShiftCommand(cmds ...string) (cmd string, err error)
-	//
-	// and then return zli.CommandNoneGiven, zli.CommandUnknown, and
-	// zli.CommandAmbiguous as an error.
+// It will return ErrCommandNoneGiven if there is no command, and
+// ErrCommandUnknown if the command is not found.
+func (f *Flags) ShiftCommand(cmds ...string) (string, error) {
 	var (
 		pushback []string
 		cmd      string
@@ -130,7 +129,7 @@ func (f *Flags) ShiftCommand(cmds ...string) string {
 	for {
 		cmd = f.Shift()
 		if cmd == "" {
-			return CommandNoneGiven
+			return "", ErrCommandNoneGiven{}
 		}
 		if cmd[0] == '-' || strings.ContainsRune(cmd, '=') {
 			pushback = append(pushback, cmd)
@@ -143,31 +142,31 @@ func (f *Flags) ShiftCommand(cmds ...string) string {
 	cmd = strings.ToLower(cmd)
 
 	if len(cmds) == 0 {
-		return cmd
+		return cmd, nil
 	}
 
-	var found string
+	var found []string
 	for _, c := range cmds {
 		if c == cmd {
-			return cmd
+			return cmd, nil
 		}
 
 		if strings.HasPrefix(c, cmd) {
-			if found != "" {
-				return CommandAmbiguous
-			}
-
 			if i := strings.IndexRune(c, '='); i > -1 { // Alias
 				c = c[i+1:]
 			}
-			found = c
+			found = append(found, c)
 		}
 	}
 
-	if found == "" {
-		return CommandUnknown
+	switch len(found) {
+	case 0:
+		return "", ErrCommandUnknown(cmd)
+	case 1:
+		return found[0], nil
+	default:
+		return "", ErrCommandAmbiguous{Cmd: cmd, Opts: found}
 	}
-	return found
 }
 
 // Parse the set of flags in f.Args.

@@ -66,6 +66,40 @@ func ExampleFlags() {
 	// Remaining: [xx yy]
 }
 
+func ExampleFlags_Shiftcommand() {
+	f := zli.NewFlags(append([]string{"prog", "i"}))
+
+	// Known commands.
+	commands := []string{"help", "version", "verbose", "install"}
+
+	switch cmd, err := f.ShiftCommand(commands...); cmd {
+	// On error the return value is "" and err is set to something useful; for
+	// example:
+	//
+	//    % prog
+	//    prog: no command given
+	//
+	//    % prog hello
+	//    prog: unknown command: "hello"
+	//
+	//    % prog v
+	//    prog: ambigious command: "v"; matches: "verbose", "version"
+	case "":
+		zli.F(err)
+
+	// The full command is returned, e.g. "prog h" will return "help".
+	case "help":
+		fmt.Println("cmd: help")
+	case "version":
+		fmt.Println("cmd: version")
+	case "install":
+		fmt.Println("cmd: install")
+	}
+
+	// Output:
+	// cmd: install
+}
+
 func TestFlags(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -592,33 +626,37 @@ func TestShiftCommand(t *testing.T) {
 		in       []string
 		commands []string
 		want     string
+		wantErr  string
 	}{
-		{[]string{""}, nil, zli.CommandNoneGiven},
-		{[]string{"-a"}, nil, zli.CommandNoneGiven},
+		{[]string{""}, nil, "", "no command given"},
+		{[]string{"-a"}, nil, "", "no command given"},
 
-		{[]string{"help"}, []string{"asd"}, zli.CommandUnknown},
+		{[]string{"help"}, []string{"asd"}, "", `unknown command: "help"`},
 
-		{[]string{"help"}, []string{"help", "heee"}, "help"},
-		{[]string{"hel"}, []string{"help", "heee"}, "help"},
-		{[]string{"he"}, []string{"help", "heee"}, zli.CommandAmbiguous},
+		{[]string{"help"}, []string{"help", "heee"}, "help", ""},
+		{[]string{"hel"}, []string{"help", "heee"}, "help", ""},
+		{[]string{"he"}, []string{"help", "heee"}, "", `ambigious command: "he"; matches: "help", "heee"`},
 
-		{[]string{"usage"}, []string{"help", "usage=help"}, "help"},
+		{[]string{"usage"}, []string{"help", "usage=help"}, "help", ""},
 
-		{[]string{"create", "-db=x"}, []string{"create"}, "create"},
-		{[]string{"-flag", "create", "-db=x"}, []string{"create"}, "create"},
+		{[]string{"create", "-db=x"}, []string{"create"}, "create", ""},
+		{[]string{"-flag", "create", "-db=x"}, []string{"create"}, "create", ""},
 
-		{[]string{"-flag", "create", "-db=x"}, nil, "create"},
+		{[]string{"-flag", "create", "-db=x"}, nil, "create", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			f := zli.NewFlags(append([]string{"prog"}, tt.in...))
-			got := f.ShiftCommand(tt.commands...)
+			have, err := f.ShiftCommand(tt.commands...)
 			f.Bool(false, "a")
 			f.Parse()
 
-			if got != tt.want {
-				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
+			if !errorContains(err, tt.wantErr) {
+				t.Fatalf("wrong error\nhave: %q\nwant: %q", err, tt.wantErr)
+			}
+			if have != tt.want {
+				t.Errorf("wrong cmd\nhave: %q\nwant: %q", have, tt.want)
 			}
 		})
 	}
