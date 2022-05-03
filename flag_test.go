@@ -66,7 +66,7 @@ func ExampleFlags() {
 	// Remaining: [xx yy]
 }
 
-func ExampleFlags_Shiftcommand() {
+func ExampleFlags_ShiftCommand() {
 	f := zli.NewFlags(append([]string{"prog", "i"}))
 
 	// Known commands.
