@@ -17,15 +17,13 @@ Other packages:
 [Colors](#colors) ·
 [Testing](#testing)
 
-
 ### Utility functions
-
 `zli.Errorf()` and `zli.Fatalf()` work like `fmt.Printf()`, except that they
 print to stderr, prepend the program name, and always append a newline:
 
 ```go
-zli.Errorf("oh noes: %s", "u brok it")   // "progname: oh noes: u brok it"
-zli.Fatalf("I swear it was %s", "Dave")  // "progname: I swear it was Dave" and exit 1
+zli.Errorf("oh noes: %s", "u brok it")   // "progname: oh noes: u brok it" to stderr
+zli.Fatalf("I swear it was %s", "Dave")  // "progname: I swear it was Dave" to stderr and exit 1
 ```
 
 `zli.F()` is a small wrapper/shortcut around `zli.Fatalf()` which accepts an
@@ -41,9 +39,8 @@ depending on what arguments the user gave. With `zli.InputOrFile()` this is
 pretty easy:
 
 ```go
-fp, err := zli.InputOrFile("/a-file", false)  // Open a file.
-
-fp, err := zli.InputOrFile("-", false)        // Read from stdin; can also use "" for stdin.
+arg := "/a-file"
+fp, err := zli.InputOrFile(arg, false)        // Open stdin if arg is "-" or "-", or a file otherwise.
 defer fp.Close()                              // No-op close on stdin.
 ```
 
@@ -51,14 +48,6 @@ The second argument controls if a `reading from stdin...` message should be
 printed to stderr, which is a bit better UX IMHO (how often have you typed `grep
 foo` and waited, only to realize it's waiting for stdin?) See [Better UX when
 reading from stdin][stdin].
-
-With `zli.InputOrArgs()` you can read arguments from stdin if it's an empty
-list:
-
-```go
-args := zli.InputOrArgs(os.Args[1:], "\n", false)     // Split arguments on newline.
-args := zli.InputOrArgs(os.Args[1:], "\n\t ", false)  // Or on spaces and tabs too.
-```
 
 [stdin]: https://www.arp242.net/read-stdin.html
 
@@ -106,20 +95,17 @@ func main() {
 }
 ```
 
-zli helpfully includes the [go-isatty][isatty] and `GetSize()` from
-[x/crypto/ssh/terminal][ssh] as they're so commonly used:
+zli helpfully includes the `GetSize()` and `IsTerminal()` from [x/term][term] as
+they're so commonly used:
 
 ```go
 interactive := zli.IsTerminal(os.Stdout.Fd())  // Check if stdout is a terminal.
 w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
 ```
 
-[isatty]: https://github.com/mattn/go-isatty/
-[ssh]: https://godoc.org/golang.org/x/crypto/ssh/terminal#GetSize
-
+[term]: https://godoc.org/golang.org/x/term
 
 ### Flag parsing
-
 zli comes with a flag parser which, IMHO, gives a better experience than Go's
 `flag` package. See [flag.markdown](/flag.markdown) for some rationale on "why
 this and not stdlib flags?"
@@ -131,14 +117,17 @@ f := zli.NewFlags([]string{"example", "-vv", "-f=csv", "-a", "xx", "yy"})
 // The first argument is the default and everything after that is the flag name
 // with aliases.
 var (
-    verbose = f.IntCounter(0, "v", "verbose")   // Count the number of -v flags.
-    exclude = f.StringList(nil, "e", "exclude") // Can appear more than once.
-    all     = f.Bool(false, "a", "all")         // Regular bool.
-    format  = f.String("", "f", "format")       // Regular string.
+    verbose = f.IntCounter(0, "v", "verbose")        // Count the number of -v flags.
+    exclude = f.StringList(nil, "e", "exclude")      // Can appear more than once.
+    all     = f.Bool(false, "a", "all")              // Regular bool.
+    format  = f.String("", "f", "format")            // Regular string.
+    asJSON  = f.Optional().String("", "-j", "json")  // Optional value
 )
 
 // Shift the first argument (i.e. os.Args[1]). Useful to get the "subcommand"
 // name. This works before and after Parse().
+// Can also use "cmd := f.ShiftCommand("help", "install")", in which case it
+// will use the first non-ambiguous match.
 switch f.Shift() {
 case "help":
     // Run help
@@ -176,6 +165,14 @@ fmt.Println("All:", all.Bool())
 // Allow a flag to appear more than once.
 fmt.Println("%s exclude patterns: %v", len(all.Strings()), all.Strings())
 
+// -json flag has an optional value.
+if asJSON.Set() {
+    printas := "json"
+    if asJSON.String() == "indent" {
+        printas = "json-indent"
+    }
+}
+
 // f.Args is set to everything that's not a flag or argument.
 fmt.Println("Remaining:", f.Args)
 ```
@@ -184,7 +181,8 @@ The flag format is as follows:
 
 - Flags can have a single `-` or two `--`, they're treated identical.
 
-- Arguments are after a space or `=`: `-f v` or `-f=v`.
+- Arguments are after a space or `=`: `-f v` or `-f=v`. Arguments that start
+  with a `-` must use the `=` variant (`-f=-val`).
 
 - Booleans can be grouped; `-ab` is the same as `-a -b`; this only works with a
   single `-` (`--ab` would be an error).
@@ -206,10 +204,9 @@ reminiscent of manpages:
 See the grep example.
 
 ### Colors
-
 You can add colors and some other text attributes to a string with
-`zli.Colorize()`, which returns a modified string with the terminal escape codes,
-ending with reset.
+`zli.Colorize()`, which returns a modified string with the terminal escape
+codes, ending with reset.
 
 It won't do anything if `zli.WantColor` is `false`; this is disabled by default
 if the output isn't a terminal or `NO_COLOR` is set, but you can override it if
@@ -295,9 +292,7 @@ sets the flag to signal how to interpret it.
 Do you really want to do this just to create a `const` instead of a `var`?
 Probably not 😅
 
-
 ### Testing
-
 zli uses to `zli.Stdin`, `zli.Stdout`, `zli.Stderr`, and `zli.Exit` instead of
 the `os.*` variants for everything. You can swap this out with test variants
 with the `zli.Test()` function.

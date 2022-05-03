@@ -323,7 +323,6 @@ func TestFlags(t *testing.T) {
 				string 2 → "default"
 				args     → 0 []
 			`, ""},
-		// TODO: this should probably be an error?
 		{"--s -o", []string{"prog", "-s", "-o"},
 			func(f *zli.Flags) []interface{} {
 				return []interface{}{
@@ -331,10 +330,10 @@ func TestFlags(t *testing.T) {
 					f.String("", "o"),
 				}
 			}, `
-				string 1 → "-o"
+				string 1 → ""
 				string 2 → ""
-				args     → 0 []
-			`, ""},
+				args     → 2 [-s -o]
+			`, "-o: needs an argument"},
 		{"--s arg", []string{"prog", "--s", "xx"},
 			func(f *zli.Flags) []interface{} {
 				return []interface{}{
@@ -421,7 +420,7 @@ func TestFlags(t *testing.T) {
 				args   → 0 []
 			`, ""},
 
-		{"arguments starting with - work", []string{"prog", "-b", "-arg", "--long", "--long"},
+		{"arguments starting with - work", []string{"prog", "-b=-arg", "--long=--long"},
 			func(f *zli.Flags) []interface{} {
 				return []interface{}{
 					f.String("", "b"),
@@ -467,6 +466,68 @@ func TestFlags(t *testing.T) {
 				bool 4 → false
 				bool 5 → false
 				args   → 0 []
+			`, ""},
+
+		// Optional()
+		{"optional", []string{"prog", "-s1", "-s2", "val"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.Optional().String("def1", "s1"),
+					f.String("def2", "s2"),
+				}
+			}, `
+				string 1 → "def1"
+				string 2 → "val"
+				args     → 0 []
+			`, ""},
+		{"optional at end", []string{"prog", "-s2", "val", "-s1"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.Optional().String("def1", "s1"),
+					f.String("def2", "s2"),
+				}
+			}, `
+				string 1 → "def1"
+				string 2 → "val"
+				args     → 0 []
+			`, ""},
+
+		{"optional works for one flag only", []string{"prog", "-s1", "-s2"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.Optional().String("def1", "s1"),
+					f.String("def2", "s2"),
+				}
+			}, `
+				string 1 → "def1"
+				string 2 → "def2"
+				args     → 2 [-s1 -s2]
+				`, "-s2: needs an argument"},
+		{"optional int", []string{"prog", "-i1", "-s2", "val", "-i2", "2"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.Optional().Int(11, "i1"),
+					f.Optional().Int(12, "i2"),
+					f.String("def2", "s2"),
+				}
+			}, `
+				int 1    → 11
+				int 2    → 2
+				string 3 → "val"
+				args     → 0 []
+			`, ""},
+		{"optional int at end", []string{"prog", "-i1", "-s2", "val", "-i2"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{
+					f.Optional().Int(11, "i1"),
+					f.Optional().Int(12, "i2"),
+					f.String("def2", "s2"),
+				}
+			}, `
+				int 1    → 11
+				int 2    → 12
+				string 3 → "val"
+				args     → 0 []
 			`, ""},
 	}
 

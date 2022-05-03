@@ -24,13 +24,12 @@ type (
 	}
 )
 
-func (e ErrFlagUnknown) Error() string { return fmt.Sprintf("unknown flag: %q", e.flag) }
-func (e ErrFlagDouble) Error() string  { return fmt.Sprintf("flag given more than once: %q", e.flag) }
+func (e ErrFlagInvalid) Unwrap() error { return e.err }
 func (e ErrFlagInvalid) Error() string {
 	return fmt.Sprintf("%s: %s (must be a %s)", e.flag, e.err, e.kind)
 }
-
-func (e ErrFlagInvalid) Unwrap() error { return e.err }
+func (e ErrFlagUnknown) Error() string { return fmt.Sprintf("unknown flag: %q", e.flag) }
+func (e ErrFlagDouble) Error() string  { return fmt.Sprintf("flag given more than once: %q", e.flag) }
 
 // Flags are a set of parsed flags.
 //
@@ -55,7 +54,8 @@ type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
 
-	flags []flagValue
+	flags    []flagValue
+	optional bool
 }
 
 type flagValue struct {
@@ -114,6 +114,15 @@ const (
 // It will return CommandNoneGiven if there is no command, and CommandUnknown if
 // the command is not found.
 func (f *Flags) ShiftCommand(cmds ...string) string {
+	// TODO: change the way this works; returning the sentinal values is
+	// actually annoying.
+	//
+	// Instead change it to:
+	//
+	//   ShiftCommand(cmds ...string) (cmd string, err error)
+	//
+	// and then return zli.CommandNoneGiven, zli.CommandUnknown, and
+	// zli.CommandAmbiguous as an error.
 	var (
 		pushback []string
 		cmd      string
@@ -227,16 +236,25 @@ func (f *Flags) Parse() error {
 		}
 
 		var err error
-		next := func() (string, bool) {
+		next := func(opt bool) (string, bool, bool) {
 			if j := strings.IndexByte(f.Args[i], '='); j > -1 {
-				return f.Args[i][j+1:], true
+				return f.Args[i][j+1:], true, true
 			}
 			if i >= len(f.Args)-1 {
-				err = fmt.Errorf("needs an argument")
-				return "", false
+				if !opt {
+					err = fmt.Errorf("needs an argument")
+					return "", false, false
+				}
+				return "", true, false
 			}
+
+			v := f.Args[i+1]
+			if len(v) > 1 && v[0] == '-' {
+				return "", true, false
+			}
+
 			skip = true
-			return f.Args[i+1], true
+			return v, true, true
 		}
 
 		// TODO: it might make more sense to have two interfaces: singleSetter
@@ -249,43 +267,55 @@ func (f *Flags) Parse() error {
 			}
 		}
 
-		var val string
+		var (
+			val      string
+			hasValue bool
+		)
 		switch v := flag.value.(type) {
 		case flagBool:
 			*v.s = true
 			*v.v = true
 		case flagString:
-			*v.v, *v.s = next()
+			val, *v.s, hasValue = next(v.o)
+			if hasValue {
+				*v.v = val
+			}
 		case flagInt:
-			val, *v.s = next()
-			x, err := strconv.ParseInt(val, 0, 64)
-			if err != nil {
-				if nErr := errors.Unwrap(err); nErr != nil {
-					err = nErr
+			val, *v.s, hasValue = next(v.o)
+			if hasValue {
+				x, err := strconv.ParseInt(val, 0, 64)
+				if err != nil {
+					if nErr := errors.Unwrap(err); nErr != nil {
+						err = nErr
+					}
+					return ErrFlagInvalid{a, err, "number"}
 				}
-				return ErrFlagInvalid{a, err, "number"}
+				*v.v = int(x)
 			}
-			*v.v = int(x)
 		case flagInt64:
-			val, *v.s = next()
-			x, err := strconv.ParseInt(val, 0, 64)
-			if err != nil {
-				if nErr := errors.Unwrap(err); nErr != nil {
-					err = nErr
+			val, *v.s, hasValue = next(v.o)
+			if hasValue {
+				x, err := strconv.ParseInt(val, 0, 64)
+				if err != nil {
+					if nErr := errors.Unwrap(err); nErr != nil {
+						err = nErr
+					}
+					return ErrFlagInvalid{a, err, "number"}
 				}
-				return ErrFlagInvalid{a, err, "number"}
+				*v.v = x
 			}
-			*v.v = x
 		case flagFloat64:
-			val, *v.s = next()
-			x, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				if nErr := errors.Unwrap(err); nErr != nil {
-					err = nErr
+			val, *v.s, hasValue = next(v.o)
+			if hasValue {
+				x, err := strconv.ParseFloat(val, 64)
+				if err != nil {
+					if nErr := errors.Unwrap(err); nErr != nil {
+						err = nErr
+					}
+					return ErrFlagInvalid{a, err, "number"}
 				}
-				return ErrFlagInvalid{a, err, "number"}
+				*v.v = x
 			}
-			*v.v = x
 		case flagIntCounter:
 			*v.s = true
 			*v.v++
@@ -293,25 +323,29 @@ func (f *Flags) Parse() error {
 			if !*v.s {
 				*v.v = nil
 			}
-			n, s := next()
-			*v.s = s
-			*v.v = append(*v.v, n)
+			n, s, hasValue := next(v.o)
+			if hasValue {
+				*v.s = s
+				*v.v = append(*v.v, n)
+			}
 		case flagIntList:
 			if !*v.s {
 				*v.v = nil
 			}
 
-			n, s := next()
-			x, err := strconv.ParseInt(n, 0, 64)
-			if err != nil {
-				if nErr := errors.Unwrap(err); nErr != nil {
-					err = nErr
+			n, s, hasValue := next(v.o)
+			if hasValue {
+				x, err := strconv.ParseInt(n, 0, 64)
+				if err != nil {
+					if nErr := errors.Unwrap(err); nErr != nil {
+						err = nErr
+					}
+					return ErrFlagInvalid{a, err, "number"}
 				}
-				return ErrFlagInvalid{a, err, "number"}
-			}
 
-			*v.s = s
-			*v.v = append(*v.v, int(x))
+				*v.s = s
+				*v.v = append(*v.v, int(x))
+			}
 		}
 		if err != nil {
 			return fmt.Errorf("%s: %s", a, err)
@@ -337,34 +371,42 @@ type (
 	flagBool struct {
 		v *bool
 		s *bool
+		o bool // Doesn't make much sense here, but just for consistency.
 	}
 	flagString struct {
 		v *string
 		s *bool
+		o bool
 	}
 	flagInt struct {
 		v *int
 		s *bool
+		o bool
 	}
 	flagInt64 struct {
 		v *int64
 		s *bool
+		o bool
 	}
 	flagFloat64 struct {
 		v *float64
 		s *bool
+		o bool
 	}
 	flagIntCounter struct {
 		v *int
 		s *bool
+		o bool
 	}
 	flagStringList struct {
 		v *[]string
 		s *bool
+		o bool
 	}
 	flagIntList struct {
 		v *[]int
 		s *bool
+		o bool
 	}
 )
 
@@ -417,45 +459,88 @@ func (f *Flags) append(v interface{}, n string, a ...string) {
 	f.flags = append(f.flags, flagValue{value: v, names: append([]string{n}, a...)})
 }
 
+// Optional indicates the next flag may optionally have value.
+//
+// By default String(), Int(), etc. require a value, but with Optional() set
+// both "-str" and "-str foo" will work. The default value will be used if
+// "-str" was used.
+func (f *Flags) Optional() *Flags {
+	f.optional = true
+	return f
+}
+
+// TODO: consider adding a method to automatically generate errors on conflicts;
+// for example:
+//
+//   f.Conflicts(
+//      "-json", "-toml",    // These two conflict
+//      "cmd1", "-json",     // cmd1 doesn't support -json
+//   )
+//
+// func (f *Flags) Conflicts(args ...string) {
+// }
+
 func (f *Flags) Bool(def bool, name string, aliases ...string) flagBool {
-	v := flagBool{v: &def, s: new(bool)}
+	v := flagBool{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
 func (f *Flags) String(def, name string, aliases ...string) flagString {
-	v := flagString{v: &def, s: new(bool)}
+	v := flagString{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
 func (f *Flags) Int(def int, name string, aliases ...string) flagInt {
-	v := flagInt{v: &def, s: new(bool)}
+	v := flagInt{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
 func (f *Flags) Int64(def int64, name string, aliases ...string) flagInt64 {
-	v := flagInt64{v: &def, s: new(bool)}
+	v := flagInt64{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
 func (f *Flags) Float64(def float64, name string, aliases ...string) flagFloat64 {
-	v := flagFloat64{v: &def, s: new(bool)}
+	v := flagFloat64{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
 func (f *Flags) IntCounter(def int, name string, aliases ...string) flagIntCounter {
-	v := flagIntCounter{v: &def, s: new(bool)}
+	v := flagIntCounter{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
-
 func (f *Flags) StringList(def []string, name string, aliases ...string) flagStringList {
-	v := flagStringList{v: &def, s: new(bool)}
+	v := flagStringList{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }
-
 func (f *Flags) IntList(def []int, name string, aliases ...string) flagIntList {
-	v := flagIntList{v: &def, s: new(bool)}
+	v := flagIntList{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
 	f.append(v, name, aliases...)
 	return v
 }

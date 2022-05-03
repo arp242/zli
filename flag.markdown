@@ -15,7 +15,8 @@ The Go standard package has some annoying properties:
   You can still use `--` if you want to stop flag parsing: `foo -- bar -v`.
 
 - Awkward to see if a flag wasn't given at all vs. whether someone passed an
-  empty string. This is useful sometimes.
+  empty string. This is useful sometimes. You also can't make a flag optional,
+  (i.e. have `-opt` and `-opt value` both work).
 
 - I don't like the automatic usage-generation (it looks ugly) and usage often
   prints to stderr even when it really shouldn't (this is fixable, but many
