@@ -22,6 +22,6 @@ var (
 func PrintVersion(program, version string, verbose bool) {
 	fmt.Fprintln(Stdout, program, version)
 	if verbose {
-		fmt.fprintln(Stdout, "expanded build info only available if built with Go 1.18 or newer")
+		fmt.Fprintln(Stdout, "expanded build info only available if built with Go 1.18 or newer")
 	}
 }
