@@ -24,7 +24,7 @@ var (
 //
 //   go build -ldflags '-X "zgo.at/zli.version=VERSION" -X "zgo.at/zli.progname=PROG"'
 func PrintVersion(verbose bool) {
-	if progname == "" {
+	if progname == "" && len(os.Args) > 0 {
 		progname = os.Args[0]
 	}
 	fmt.Fprintln(Stdout, progname, version)
