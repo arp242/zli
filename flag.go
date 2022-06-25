@@ -455,7 +455,13 @@ func (f flagStringList) Set() bool { return *f.s }
 func (f flagIntList) Set() bool    { return *f.s }
 
 func (f *Flags) append(v interface{}, n string, a ...string) {
-	f.flags = append(f.flags, flagValue{value: v, names: append([]string{n}, a...)})
+	for i := range a {
+		a[i] = strings.TrimLeft(a[i], "-")
+	}
+	f.flags = append(f.flags, flagValue{
+		value: v,
+		names: append([]string{strings.TrimLeft(n, "-")}, a...),
+	})
 }
 
 // Optional indicates the next flag may optionally have value.

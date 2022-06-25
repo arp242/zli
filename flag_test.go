@@ -563,6 +563,30 @@ func TestFlags(t *testing.T) {
 				string 3 → "val"
 				args     → 0 []
 			`, ""},
+
+		// Flag definitions can start with "-"
+		{"leading -", []string{"", "-b"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Bool(false, "-b")}
+			}, `
+				bool 1 → true
+				args   → 0 []
+			`, ""},
+		{"leading -", []string{"", "-b"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Bool(false, "--b", "--bool")}
+			}, `
+				bool 1 → true
+				args   → 0 []
+			`, ""},
+
+		{"leading -", []string{"", "-bool"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Bool(false, "--a", "--bool")}
+			}, `
+				bool 1 → true
+				args   → 0 []
+			`, ""},
 	}
 
 	type (
