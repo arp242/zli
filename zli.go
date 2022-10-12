@@ -72,11 +72,15 @@ func F(err error) {
 	}
 }
 
+// StdinMessage is the message InputOrFile() and InputOnArgs() use to notify
+// the user the program is reading from stdin.
+var StdinMessage = "reading from stdin..."
+
 // InputOrFile will return a reader connected to stdin if path is "" or "-", or
 // open a path for any other value.
 //
-// It will print a message to stderr notifying the user it's reading from stdin
-// if the terminal is interactive and quiet is false.
+// It will print StdinMessage to stderr notifying the user it's reading from
+// stdin if the terminal is interactive and quiet is false.
 // See: https://www.arp242.net/read-stdin.html
 func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 	if path != "" && path != "-" {
@@ -88,7 +92,7 @@ func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 	}
 
 	if !quiet && IsTerminal(os.Stdin.Fd()) {
-		fmt.Fprintf(Stderr, "%s: reading from stdin...\r", Program())
+		fmt.Fprintf(Stderr, Program()+": "+StdinMessage+"\r")
 		os.Stderr.Sync()
 	}
 	return ioutil.NopCloser(Stdin), nil
@@ -105,8 +109,8 @@ func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 //   prog 'foo bar' 'x y'
 //   printf "foo bar\nx y\n" | prog
 //
-// It will print a message to stderr notifying the user it's reading from stdin
-// if the terminal is interactive and quiet is false.
+// It will print StdinMessage to stderr notifying the user it's reading from
+// stdin if the terminal is interactive and quiet is false.
 // See: https://www.arp242.net/read-stdin.html
 func InputOrArgs(args []string, sep string, quiet bool) ([]string, error) {
 	if len(args) > 0 {
@@ -116,7 +120,7 @@ func InputOrArgs(args []string, sep string, quiet bool) ([]string, error) {
 	interactive := IsTerminal(os.Stdin.Fd())
 
 	if !quiet && interactive {
-		fmt.Fprintf(Stderr, "%s: reading from stdin...", Program())
+		fmt.Fprintf(Stderr, Program()+": "+StdinMessage)
 		os.Stderr.Sync()
 	}
 	in, err := ioutil.ReadAll(Stdin)
