@@ -103,11 +103,11 @@ func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 //
 // The argument are split on newline; the following are all identical:
 //
-//   prog foo bar
-//   printf "foo\nbar\n" | prog
+//	prog foo bar
+//	printf "foo\nbar\n" | prog
 //
-//   prog 'foo bar' 'x y'
-//   printf "foo bar\nx y\n" | prog
+//	prog 'foo bar' 'x y'
+//	printf "foo bar\nx y\n" | prog
 //
 // It will print StdinMessage to stderr notifying the user it's reading from
 // stdin if the terminal is interactive and quiet is false.
@@ -142,7 +142,7 @@ func InputOrArgs(args []string, sep string, quiet bool) ([]string, error) {
 //
 // The typical way to use this is at the start of a function like so:
 //
-//    defer zli.PageStdout()()
+//	defer zli.PageStdout()()
 //
 // You need to be a bit careful when calling Exit() explicitly, since that will
 // exit immediately without running any defered functions. You have to either

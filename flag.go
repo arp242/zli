@@ -62,18 +62,18 @@ func (e ErrPositional) Error() string {
 //   - Flags start with one or more '-'s; '-a' and '--a' are identical, as are
 //     '-long' and '--long'.
 //
-//  - Flags are separated with arguments by one space or '='. This is required:
-//    '-vVALUE' is invalid; you must use '-v VALUE' or '-v=VALUE'.
+//   - Flags are separated with arguments by one space or '='. This is required:
+//     '-vVALUE' is invalid; you must use '-v VALUE' or '-v=VALUE'.
 //
-//  - Single-letter flags can be grouped; '-ab' is identical to '-a -b', and
-//    '-ab VAL' is identical to '-a -b VAL'. "Long" flags cannot be grouped.
+//   - Single-letter flags can be grouped; '-ab' is identical to '-a -b', and
+//     '-ab VAL' is identical to '-a -b VAL'. "Long" flags cannot be grouped.
 //
-//  - Long flag names take precedence over single-letter ones, e.g. if you
-//    define the flags '-long', '-l', '-o', '-n', and '-g' then '-long' will be
-//    parsed as '-long'.
+//   - Long flag names take precedence over single-letter ones, e.g. if you
+//     define the flags '-long', '-l', '-o', '-n', and '-g' then '-long' will be
+//     parsed as '-long'.
 //
-//  - Anything that doesn't start with a '-' or follows '--' is treated as a
-//    positional argument. This can be freely interspersed with flags.
+//   - Anything that doesn't start with a '-' or follows '--' is treated as a
+//     positional argument. This can be freely interspersed with flags.
 type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
@@ -132,8 +132,8 @@ func (e ErrCommandAmbiguous) Error() string {
 // This can work both before or after f.Parse(); this is useful if you want to
 // have different flags for different arguments, and both of these will work:
 //
-//   $ prog -flag cmd
-//   $ prog cmd -flag
+//	$ prog -flag cmd
+//	$ prog cmd -flag
 //
 // If cmds is given then it matches commands with this list; commands can be
 // matched as an abbreviation as long as it's unambiguous; if you have "search"
@@ -506,8 +506,8 @@ func (f flagIntList) Ints() []int          { return *f.v }
 //
 // This means that these two are identical:
 //
-//   -skip=foo,bar
-//   -skip=foo -skip=bar
+//	-skip=foo,bar
+//	-skip=foo -skip=bar
 func (f flagStringList) StringsSplit(sep string) []string {
 	l := make([]string, 0, len(*f.v))
 	for _, ll := range *f.v {

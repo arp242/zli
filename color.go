@@ -10,12 +10,12 @@ import (
 /*
 Color is a set of attributes to apply; the attributes are stored as follows:
 
-                                         fg true, 256, 16 color mode ─┬──┐
-                                      bg true, 256, 16 color mode ─┬─┐│  │
-                                                                   │ ││  │┌── error parsing hex color
-       ┌───── bg color ────────────┐ ┌───── fg color ────────────┐ │ ││  ││┌─ term attr
-       v                           v v                           v v vv  vvv         v
-    0b 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000
+	                                     fg true, 256, 16 color mode ─┬──┐
+	                                  bg true, 256, 16 color mode ─┬─┐│  │
+	                                                               │ ││  │┌── error parsing hex color
+	   ┌───── bg color ────────────┐ ┌───── fg color ────────────┐ │ ││  ││┌─ term attr
+	   v                           v v                           v v vv  vvv         v
+	0b 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000 0000_0000
 
 The terminal attributes are bold, underline, etc. are stored as flags. The error
 flag signals there was an error parsing a hex color with ColorHex().
@@ -206,10 +206,10 @@ func clamp(c, min, max int) Color {
 //
 // You can use this to set colors directly with fmt.Print:
 //
-//     fmt.Println(zli.Red|zli.Bold, "red!") // Set colors "directly"; Println() will call String()
-//     fmt.Println("and bold!", zli.Reset)   // Don't forget to reset it!
+//	fmt.Println(zli.Red|zli.Bold, "red!") // Set colors "directly"; Println() will call String()
+//	fmt.Println("and bold!", zli.Reset)   // Don't forget to reset it!
 //
-//     fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
+//	fmt.Printf("%sc%so%sl%so%sr%s\n", zli.Red, zli.Magenta, zli.Cyan, zli.Blue, zli.Yellow, zli.Reset)
 func (c Color) String() string {
 	if !WantColor || c&ColorError != 0 {
 		return ""
