@@ -22,6 +22,12 @@ type (
 		err  error
 		kind string
 	}
+
+	// ErrPositional is used when there are too few or too many positional
+	// arguments.
+	ErrPositional struct {
+		min, max, n int
+	}
 )
 
 func (e ErrFlagInvalid) Unwrap() error { return e.err }
@@ -30,6 +36,24 @@ func (e ErrFlagInvalid) Error() string {
 }
 func (e ErrFlagUnknown) Error() string { return fmt.Sprintf("unknown flag: %q", e.flag) }
 func (e ErrFlagDouble) Error() string  { return fmt.Sprintf("flag given more than once: %q", e.flag) }
+func (e ErrPositional) Error() string {
+	pl := func(n int) string {
+		if n == 1 {
+			return "argument"
+		}
+		return "arguments"
+	}
+	switch {
+	case e.min == e.max:
+		return fmt.Sprintf("exactly %d positional %s required, but %d given", e.min, pl(e.min), e.n)
+	case e.max == 0 && e.min > 0:
+		return fmt.Sprintf("at least %d positional %s required, but %d given", e.min, pl(e.min), e.n)
+	case e.min == 0 && e.max > 0:
+		return fmt.Sprintf("at most %d positional %s accepted, but %d given", e.max, pl(e.max), e.n)
+	default:
+		return fmt.Sprintf("between %d and %d positional arguments accepted, but %d given", e.min, e.max, e.n)
+	}
+}
 
 // Flags are a set of parsed flags.
 //
@@ -38,18 +62,18 @@ func (e ErrFlagDouble) Error() string  { return fmt.Sprintf("flag given more tha
 //   - Flags start with one or more '-'s; '-a' and '--a' are identical, as are
 //     '-long' and '--long'.
 //
-//  - Flags are separated with arguments by one space or '='. This is required:
-//    '-vVALUE' is invalid; you must use '-v VALUE' or '-v=VALUE'.
+//   - Flags are separated with arguments by one space or '='. This is required:
+//     '-vVALUE' is invalid; you must use '-v VALUE' or '-v=VALUE'.
 //
-//  - Single-letter flags can be grouped; '-ab' is identical to '-a -b', and
-//    '-ab VAL' is identical to '-a -b VAL'. "Long" flags cannot be grouped.
+//   - Single-letter flags can be grouped; '-ab' is identical to '-a -b', and
+//     '-ab VAL' is identical to '-a -b VAL'. "Long" flags cannot be grouped.
 //
-//  - Long flag names take precedence over single-letter ones, e.g. if you
-//    define the flags '-long', '-l', '-o', '-n', and '-g' then '-long' will be
-//    parsed as '-long'.
+//   - Long flag names take precedence over single-letter ones, e.g. if you
+//     define the flags '-long', '-l', '-o', '-n', and '-g' then '-long' will be
+//     parsed as '-long'.
 //
-//  - Anything that doesn't start with a '-' or follows '--' is treated as a
-//    positional argument. This can be freely interspersed with flags.
+//   - Anything that doesn't start with a '-' or follows '--' is treated as a
+//     positional argument. This can be freely interspersed with flags.
 type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
@@ -108,8 +132,8 @@ func (e ErrCommandAmbiguous) Error() string {
 // This can work both before or after f.Parse(); this is useful if you want to
 // have different flags for different arguments, and both of these will work:
 //
-//   $ prog -flag cmd
-//   $ prog cmd -flag
+//	$ prog -flag cmd
+//	$ prog cmd -flag
 //
 // If cmds is given then it matches commands with this list; commands can be
 // matched as an abbreviation as long as it's unambiguous; if you have "search"
@@ -169,10 +193,51 @@ func (f *Flags) ShiftCommand(cmds ...string) (string, error) {
 	}
 }
 
+var (
+	// AllowUnknown indicates that unknown flags are not an error; unknown flags
+	// are added to the Args list.
+	//
+	// This is useful if you have subcommands with different flags, for example:
+	//
+	//     f := zli.NewFlags(os.Args)
+	//     globalFlag := f.String(..)
+	//     f.Parse(zli.AllowUnknown())
+	//
+	//     switch cmd := f.ShiftCommand(..) {
+	//     case "serve":
+	//         serveFlag := f.String(..)
+	//         f.Parse()   // *Will* error out on unknown flags.
+	//     }
+	AllowUnknown = func() parseOpt { return func(o *parseOpts) { o.allowUnknown = true } }
+
+	// Positional sets the lower and upper bounds for the number of positional
+	// arguments.
+	//
+	//   Positional(0, 0)     No limit and accept everything (the default).
+	//   Positional(1, 0)     Must have at least one positional argument.
+	//   Positional(1, 1)     Must have exactly one positional argument.
+	//   Positional(0, 3)     May optionally have up to three positional arguments.
+	//   Positional(-1, 0)    Don't accept any conditionals (the max is ignored).only the min is
+	Positional = func(min, max int) parseOpt { return func(o *parseOpts) { o.pos = [2]int{min, max} } }
+
+	// NoPositional is a shortcut for Positional(-1, 0)
+	NoPositional = func() parseOpt { return func(o *parseOpts) { o.pos = [2]int{-1, -1} } }
+)
+
+type (
+	parseOpts struct {
+		allowUnknown bool
+		pos          [2]int
+	}
+	parseOpt func(*parseOpts)
+)
+
 // Parse the set of flags in f.Args.
-func (f *Flags) Parse() error {
-	// TODO: this should allow calling it twice; this is useful for adding flags
-	// later for subcommands.
+func (f *Flags) Parse(opts ...parseOpt) error {
+	var opt parseOpts
+	for _, o := range opts {
+		o(&opt)
+	}
 
 	// Modify f.Args to split out grouped boolean values: "prog -ab" becomes
 	// "prog -a -b"
@@ -231,6 +296,10 @@ func (f *Flags) Parse() error {
 
 		flag, ok := f.match(a)
 		if !ok {
+			if opt.allowUnknown {
+				p = append(p, a)
+				continue
+			}
 			return &ErrFlagUnknown{a}
 		}
 
@@ -350,6 +419,12 @@ func (f *Flags) Parse() error {
 			return fmt.Errorf("%s: %s", a, err)
 		}
 	}
+
+	if (opt.pos[0] > 0 && len(p) < opt.pos[0]) ||
+		(opt.pos[1] > 0 && len(p) > opt.pos[1]) ||
+		opt.pos[0] == -1 && len(p) > 0 {
+		return ErrPositional{min: opt.pos[0], max: opt.pos[1], n: len(p)}
+	}
 	f.Args = p
 	return nil
 }
@@ -431,8 +506,8 @@ func (f flagIntList) Ints() []int          { return *f.v }
 //
 // This means that these two are identical:
 //
-//   -skip=foo,bar
-//   -skip=foo -skip=bar
+//	-skip=foo,bar
+//	-skip=foo -skip=bar
 func (f flagStringList) StringsSplit(sep string) []string {
 	l := make([]string, 0, len(*f.v))
 	for _, ll := range *f.v {
@@ -455,7 +530,13 @@ func (f flagStringList) Set() bool { return *f.s }
 func (f flagIntList) Set() bool    { return *f.s }
 
 func (f *Flags) append(v interface{}, n string, a ...string) {
-	f.flags = append(f.flags, flagValue{value: v, names: append([]string{n}, a...)})
+	for i := range a {
+		a[i] = strings.TrimLeft(a[i], "-")
+	}
+	f.flags = append(f.flags, flagValue{
+		value: v,
+		names: append([]string{strings.TrimLeft(n, "-")}, a...),
+	})
 }
 
 // Optional indicates the next flag may optionally have value.

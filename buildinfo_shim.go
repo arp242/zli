@@ -6,12 +6,18 @@ package zli
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 var (
 	progname = ""
 	version  = "dev"
 )
+
+// GetVersion gets this program's version.
+func GetVersion() (tag string, commit string, date time.Time) {
+	return version, "needs Go 1.18", time.Time{}
+}
 
 // PrintVersion prints this program's version.
 //
@@ -21,7 +27,7 @@ var (
 // This assumes that zgo.at/zli.version and zgo.at/zli.progname were set at
 // build time:
 //
-//   go build -ldflags '-X "zgo.at/zli.version=VERSION" -X "zgo.at/zli.progname=PROG"'
+//	go build -ldflags '-X "zgo.at/zli.version=VERSION" -X "zgo.at/zli.progname=PROG"'
 func PrintVersion(verbose bool) {
 	if progname == "" && len(os.Args) > 0 {
 		progname = os.Args[0]

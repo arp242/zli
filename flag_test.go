@@ -563,6 +563,30 @@ func TestFlags(t *testing.T) {
 				string 3 → "val"
 				args     → 0 []
 			`, ""},
+
+		// Flag definitions can start with "-"
+		{"leading -", []string{"", "-b"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Bool(false, "-b")}
+			}, `
+				bool 1 → true
+				args   → 0 []
+			`, ""},
+		{"leading -", []string{"", "-b"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Bool(false, "--b", "--bool")}
+			}, `
+				bool 1 → true
+				args   → 0 []
+			`, ""},
+
+		{"leading -", []string{"", "-bool"},
+			func(f *zli.Flags) []interface{} {
+				return []interface{}{f.Bool(false, "--a", "--bool")}
+			}, `
+				bool 1 → true
+				args   → 0 []
+			`, ""},
 	}
 
 	type (
@@ -662,14 +686,42 @@ func TestShiftCommand(t *testing.T) {
 	}
 }
 
-/*
+func TestPositional(t *testing.T) {
+	tests := []struct {
+		args    []string
+		pos     [2]int
+		wantErr string
+	}{
+		{[]string{"a", "b"}, [2]int{}, ""},
+
+		{[]string{"a"}, [2]int{0, 1}, ""},
+		{[]string{"a", "b"}, [2]int{0, 1}, "at most 1 positional argument accepted, but 2 given"},
+		{[]string{"a", "b"}, [2]int{1, 1}, "exactly 1 positional argument required, but 2 given"},
+
+		{[]string{"a", "b"}, [2]int{1, 2}, ""},
+		{[]string{"a", "b", "c"}, [2]int{1, 2}, "between 1 and 2 positional arguments accepted, but 3 given"},
+
+		{[]string{"a", "b", "c"}, [2]int{3, 0}, ""},
+		{[]string{"a", "b"}, [2]int{3, 0}, "at least 3 positional arguments required, but 2 given"},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			f := zli.NewFlags(append([]string{"prog"}, tt.args...))
+			err := f.Parse(zli.Positional(tt.pos[0], tt.pos[1]))
+			if !errorContains(err, tt.wantErr) {
+				t.Fatalf("wrong error\nhave: %q\nwant: %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestDoubleParse(t *testing.T) {
 	f := zli.NewFlags([]string{"prog", "-global", "cmd", "-other"})
-	f.IgnoreUnknown(true)
 
 	var global = f.Bool(false, "global")
 	{
-		err := f.Parse()
+		err := f.Parse(zli.AllowUnknown())
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -678,22 +730,19 @@ func TestDoubleParse(t *testing.T) {
 		}
 	}
 
-	t.Log(f.Args)
-	f.IgnoreUnknown(false)
 	var other = f.Bool(false, "other")
 	err := f.Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if other.Set() {
+	if !other.Set() {
 		t.Error("other not set", f.Args)
 	}
 	if len(f.Args) != 1 && f.Args[1] != "cmd" {
 		t.Error(f.Args)
 	}
 }
-*/
 
 // Just to make sure it's not ridiculously slow or anything.
 func BenchmarkFlag(b *testing.B) {
