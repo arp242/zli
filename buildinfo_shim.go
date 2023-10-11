@@ -6,12 +6,18 @@ package zli
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 var (
 	progname = ""
 	version  = "dev"
 )
+
+// GetVersion gets this program's version.
+func GetVersion() (tag string, commit string, date time.Time) {
+	return version, "needs Go 1.18", time.Time{}
+}
 
 // PrintVersion prints this program's version.
 //
