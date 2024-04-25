@@ -3,9 +3,13 @@ package zli
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"runtime/pprof"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 type (
@@ -78,8 +82,9 @@ type Flags struct {
 	Program string   // Program name.
 	Args    []string // List of arguments, after parsing this will be reduces to non-flags.
 
-	flags    []flagValue
-	optional bool
+	flags            []flagValue
+	optional         bool
+	cpuProf, memProf flagString
 }
 
 type flagValue struct {
@@ -238,6 +243,11 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 	for _, o := range opts {
 		o(&opt)
 	}
+
+	// Always include CPU/memory profile; doesn't actually do anything until
+	// Flags.Profile() is called.
+	f.cpuProf = f.String("", "cpuprofile")
+	f.memProf = f.String("", "memprofile")
 
 	// Modify f.Args to split out grouped boolean values: "prog -ab" becomes
 	// "prog -a -b"
@@ -623,4 +633,51 @@ func (f *Flags) IntList(def []int, name string, aliases ...string) flagIntList {
 	}
 	f.append(v, name, aliases...)
 	return v
+}
+
+// Profile enables CPU and memory profiling via the -cpuprofile and -memprofile
+// flags.
+//
+//	f := zli.NewFlags(os.Args)
+//	zli.F(f.Parse())
+//	defer f.Profile()()
+func (f *Flags) Profile() func() {
+	var stop []func()
+	go func() { // Make sure it gets written on ^C
+		s := make(chan os.Signal, 1)
+		signal.Notify(s, syscall.SIGHUP, syscall.SIGTERM, os.Interrupt /*SIGINT*/)
+		<-s
+		for _, f := range stop {
+			f()
+		}
+		os.Exit(0)
+	}()
+
+	if f.cpuProf.Set() {
+		fp, err := os.Create(f.cpuProf.String())
+		F(err)
+
+		err = pprof.StartCPUProfile(fp)
+		F(err)
+		stop = append(stop, func() {
+			defer fp.Close()
+			pprof.StopCPUProfile()
+		})
+	}
+	if f.memProf.Set() {
+		f := func() {
+			fp, err := os.Create(f.memProf.String())
+			F(err)
+			defer fp.Close()
+
+			err = pprof.WriteHeapProfile(fp)
+			F(err)
+		}
+		stop = append(stop, f)
+	}
+	return func() {
+		for _, f := range stop {
+			f()
+		}
+	}
 }
