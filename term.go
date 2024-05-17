@@ -1,6 +1,3 @@
-//go:build !no_term
-// +build !no_term
-
 package zli
 
 import (
@@ -9,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	"golang.org/x/term"
+	"zgo.at/zli/internal/term"
 )
 
 // IsTerminal reports if this file descriptor is an interactive terminal.
