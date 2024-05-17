@@ -104,28 +104,28 @@ func TestFlags(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    []string
-		flags   func(*zli.Flags) []interface{}
+		flags   func(*zli.Flags) []any
 		want    string
 		wantErr string
 	}{
 		// No arguments, no problem.
 		{"nil args", nil,
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "b")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "b")}
 			}, `
 			bool 1 → false
 			args   → 0 []
 			`, ""},
 		{"empty args", []string{},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "b")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "b")}
 			}, `
 			bool 1 → false
 			args   → 0 []
 			`, ""},
 		{"prog name", []string{"progname"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "b")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "b")}
 			}, `
 			bool 1 → false
 			args   → 0 []
@@ -133,45 +133,45 @@ func TestFlags(t *testing.T) {
 
 		// Get positional arguments
 		{"1 arg", []string{"progname", "pos1"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 			string 1 → ""
 			args     → 1 [pos1]
 			`, ""},
 		{"args with space", []string{"progname", "pos1", "pos 2", "pos\n3"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 			string 1 → ""
 			args     → 3 [pos1 pos 2 pos
 							3]
 			`, ""},
 		{"after flag", []string{"progname", "-s", "arg", "pos 1", "pos 2"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 			string 1 → "arg"
 			args     → 2 [pos 1 pos 2]
 			`, ""},
 		{"before flag", []string{"progname", "pos 1", "pos 2", "-s", "arg"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 			string 1 → "arg"
 			args     → 2 [pos 1 pos 2]
 			`, ""},
 		{"before and after flag", []string{"progname", "pos 1", "-s", "arg", "pos 2"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 			string 1 → "arg"
 			args     → 2 [pos 1 pos 2]
 			`, ""},
 
 		{"single - is a valid argument", []string{"progname", "-s", "-", "-"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 			string 1 → "-"
 			args     → 1 [-]
@@ -179,8 +179,8 @@ func TestFlags(t *testing.T) {
 		// Make sure parsing is stopped after --
 		{
 			"-- bool", []string{"prog", "-b", "--"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Bool(false, "b"),
 				}
 			}, `
@@ -204,71 +204,71 @@ func TestFlags(t *testing.T) {
 
 		// Basic test for all the different flag types.
 		{"bool", []string{"prog", "-b"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "b")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "b")}
 			}, `
 			bool 1 → true
 			args   → 0 []
 			`, ""},
 		{"string", []string{"prog", "-s", "val"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 				string 1 → "val"
 				args     → 0 []
 			`, ""},
 		{"int", []string{"prog", "-i", "42"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Int(0, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Int(0, "i")}
 			}, `
 				int 1 → 42
 				args  → 0 []
 			`, ""},
 		{"int64", []string{"prog", "-i", "42"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Int64(0, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Int64(0, "i")}
 			}, `
 				int64 1 → 42
 				args  → 0 []
 			`, ""},
 		{"int64", []string{"prog", "-i", "1_000_000"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Int64(0, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Int64(0, "i")}
 			}, `
 				int64 1 → 1000000
 				args  → 0 []
 			`, ""},
 		{"int64", []string{"prog", "-i", "0x10"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Int64(0, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Int64(0, "i")}
 			}, `
 				int64 1 → 16
 				args  → 0 []
 			`, ""},
 		{"float64", []string{"prog", "-i", "42.666"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Float64(0, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Float64(0, "i")}
 			}, `
 				float64 1 → 42.666000
 				args  → 0 []
 			`, ""},
 		{"intcounter", []string{"prog", "-i", "-i", "-i"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.IntCounter(0, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.IntCounter(0, "i")}
 			}, `
 				int 1 → 3
 				args  → 0 []
 			`, ""},
 		{"stringlist", []string{"prog", "-s", "a", "-s", "b", "-s", "c"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.StringList(nil, "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.StringList(nil, "s")}
 			}, `
 				list 1 → [a b c]
 				args   → 0 []
 			`, ""},
 		{"intlist", []string{"prog", "-s", "1", "-s", "3", "-s", "5"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.IntList(nil, "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.IntList(nil, "s")}
 			}, `
 				list 1 → [1 3 5]
 				args   → 0 []
@@ -276,43 +276,43 @@ func TestFlags(t *testing.T) {
 
 		// Various kinds of wrong input.
 		{"unknown", []string{"prog", "-x"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 				string 1 → ""
 				args     → 1 [-x]
 			`, `unknown flag: "-x"`},
 		{"no argument", []string{"prog", "-s"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 				string 1 → ""
 				args     → 1 [-s]
 			`, "-s: needs an argument"},
 		{"multiple", []string{"prog", "-s=a", "-s=b"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.String("", "s")}
+			func(f *zli.Flags) []any {
+				return []any{f.String("", "s")}
 			}, `
 				string 1 → "a"
 				args     → 2 [-s=a -s=b]
 			`, `flag given more than once: "-s=b"`},
 		{"not an int", []string{"prog", "-i=no"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Int(42, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Int(42, "i")}
 			}, `
 				int 1 → 42
 				args  → 1 [-i=no]
 		`, `-i=no: invalid syntax (must be a number)`},
 		{"not an int64", []string{"prog", "-i=no"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Int64(42, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Int64(42, "i")}
 			}, `
 				int64 1 → 42
 				args    → 1 [-i=no]
 		`, `-i=no: invalid syntax (must be a number)`},
 		{"not a float", []string{"prog", "-i=no"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Float64(42, "i")}
+			func(f *zli.Flags) []any {
+				return []any{f.Float64(42, "i")}
 			}, `
 				float64 1 → 42.000000
 				args      → 1 [-i=no]
@@ -320,8 +320,8 @@ func TestFlags(t *testing.T) {
 
 		// Argument parsing
 		{"-s=arg", []string{"prog", "-s=xx"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 				}
 			}, `
@@ -329,8 +329,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"--s=arg", []string{"prog", "--s=xx"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 				}
 			}, `
@@ -338,8 +338,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"--s=-arg", []string{"prog", "--s=-xx"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 				}
 			}, `
@@ -347,8 +347,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"--s=-o", []string{"prog", "--s=-o"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 					f.String("default", "o"),
 				}
@@ -358,8 +358,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"--s -o", []string{"prog", "-s", "-o"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("", "s"),
 					f.String("", "o"),
 				}
@@ -369,8 +369,8 @@ func TestFlags(t *testing.T) {
 				args     → 2 [-s -o]
 			`, "-o: needs an argument"},
 		{"--s arg", []string{"prog", "--s", "xx"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 				}
 			}, `
@@ -378,8 +378,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"blank =", []string{"prog", "-s="},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 				}
 			}, `
@@ -387,8 +387,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"blank space", []string{"prog", "-s", ""},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("default", "s"),
 				}
 			}, `
@@ -399,8 +399,8 @@ func TestFlags(t *testing.T) {
 		// Okay for booleans to have multiple flags, as it doesn't really
 		// matter.
 		{"multiple bool", []string{"prog", "-b", "-b"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "b")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "b")}
 			}, `
 				bool 1 → true
 				args   → 0 []
@@ -408,8 +408,8 @@ func TestFlags(t *testing.T) {
 
 		// Group -ab as -a -b if they're booleans.
 		{"group bool", []string{"prog", "-a", "-b"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Bool(false, "a"),
 					f.Bool(false, "b"),
 				}
@@ -419,8 +419,8 @@ func TestFlags(t *testing.T) {
 				args   → 0 []
 			`, ""},
 		{"group bool", []string{"prog", "-ab"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Bool(false, "a"),
 					f.Bool(false, "b"),
 				}
@@ -430,8 +430,8 @@ func TestFlags(t *testing.T) {
 				args   → 0 []
 			`, ""},
 		{"group bool only with single -", []string{"prog", "--ab"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Bool(false, "a"),
 					f.Bool(false, "b"),
 				}
@@ -441,8 +441,8 @@ func TestFlags(t *testing.T) {
 				args   → 1 [--ab]
 			`, `unknown flag: "--ab"`},
 		{"long flag overrides grouped bool", []string{"prog", "--ab", "x"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("", "ab"),
 					f.Bool(false, "a"),
 					f.Bool(false, "b"),
@@ -455,8 +455,8 @@ func TestFlags(t *testing.T) {
 			`, ""},
 
 		{"arguments starting with - work", []string{"prog", "-b=-arg", "--long=--long"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.String("", "b"),
 					f.String("", "l", "long"),
 				}
@@ -467,8 +467,8 @@ func TestFlags(t *testing.T) {
 			`, ""},
 
 		{"prefer_long", []string{"prog", "-long"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Bool(false, "long"),
 					f.Bool(false, "l"),
 					f.Bool(false, "o"),
@@ -485,8 +485,8 @@ func TestFlags(t *testing.T) {
 			`, ""},
 
 		{"prefer_long", []string{"prog", "-long"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Bool(false, "l"),
 					f.Bool(false, "o"),
 					f.Bool(false, "long"),
@@ -504,8 +504,8 @@ func TestFlags(t *testing.T) {
 
 		// Optional()
 		{"optional", []string{"prog", "-s1", "-s2", "val"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Optional().String("def1", "s1"),
 					f.String("def2", "s2"),
 				}
@@ -515,8 +515,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"optional at end", []string{"prog", "-s2", "val", "-s1"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Optional().String("def1", "s1"),
 					f.String("def2", "s2"),
 				}
@@ -527,8 +527,8 @@ func TestFlags(t *testing.T) {
 			`, ""},
 
 		{"optional works for one flag only", []string{"prog", "-s1", "-s2"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Optional().String("def1", "s1"),
 					f.String("def2", "s2"),
 				}
@@ -538,8 +538,8 @@ func TestFlags(t *testing.T) {
 				args     → 2 [-s1 -s2]
 				`, "-s2: needs an argument"},
 		{"optional int", []string{"prog", "-i1", "-s2", "val", "-i2", "2"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Optional().Int(11, "i1"),
 					f.Optional().Int(12, "i2"),
 					f.String("def2", "s2"),
@@ -551,8 +551,8 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ""},
 		{"optional int at end", []string{"prog", "-i1", "-s2", "val", "-i2"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{
+			func(f *zli.Flags) []any {
+				return []any{
 					f.Optional().Int(11, "i1"),
 					f.Optional().Int(12, "i2"),
 					f.String("def2", "s2"),
@@ -566,23 +566,23 @@ func TestFlags(t *testing.T) {
 
 		// Flag definitions can start with "-"
 		{"leading -", []string{"", "-b"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "-b")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "-b")}
 			}, `
 				bool 1 → true
 				args   → 0 []
 			`, ""},
 		{"leading -", []string{"", "-b"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "--b", "--bool")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "--b", "--bool")}
 			}, `
 				bool 1 → true
 				args   → 0 []
 			`, ""},
 
 		{"leading -", []string{"", "-bool"},
-			func(f *zli.Flags) []interface{} {
-				return []interface{}{f.Bool(false, "--a", "--bool")}
+			func(f *zli.Flags) []any {
+				return []any{f.Bool(false, "--a", "--bool")}
 			}, `
 				bool 1 → true
 				args   → 0 []

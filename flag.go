@@ -89,7 +89,7 @@ type Flags struct {
 
 type flagValue struct {
 	names []string
-	value interface{}
+	value any
 }
 
 type setter interface{ Set() bool }
@@ -539,7 +539,7 @@ func (f flagIntCounter) Set() bool { return *f.s }
 func (f flagStringList) Set() bool { return *f.s }
 func (f flagIntList) Set() bool    { return *f.s }
 
-func (f *Flags) append(v interface{}, n string, a ...string) {
+func (f *Flags) append(v any, n string, a ...string) {
 	for i := range a {
 		a[i] = strings.TrimLeft(a[i], "-")
 	}

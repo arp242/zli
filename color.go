@@ -332,7 +332,7 @@ func Colorize(text string, c Color) string {
 //
 // The text will end with the reset code. Note that this is always added at the
 // end, after any newlines in the string.
-func Colorf(format string, c Color, a ...interface{}) { fmt.Fprintf(Stdout, Colorize(format, c), a...) }
+func Colorf(format string, c Color, a ...any) { fmt.Fprintf(Stdout, Colorize(format, c), a...) }
 
 // Colorln prints colorized output if WantColor is true.
 //

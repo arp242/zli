@@ -16,8 +16,8 @@ import (
 
 func TestFatal(t *testing.T) {
 	tests := []struct {
-		in   interface{}
-		args []interface{}
+		in   any
+		args []any
 		want string
 	}{
 		{"", nil, "zli.test: \n"},
@@ -26,15 +26,15 @@ func TestFatal(t *testing.T) {
 		{42, nil, "zli.test: 42\n"},
 
 		{"oh noes", nil, "zli.test: oh noes\n"},
-		{"oh noes: %d", []interface{}{42}, "zli.test: oh noes: 42\n"},
-		{"oh noes: %d %d", []interface{}{42, 666}, "zli.test: oh noes: 42 666\n"},
-		{[]byte("oh noes: %d %d"), []interface{}{42, 666}, "zli.test: oh noes: 42 666\n"},
+		{"oh noes: %d", []any{42}, "zli.test: oh noes: 42\n"},
+		{"oh noes: %d %d", []any{42, 666}, "zli.test: oh noes: 42 666\n"},
+		{[]byte("oh noes: %d %d"), []any{42, 666}, "zli.test: oh noes: 42 666\n"},
 
 		{errors.New("oh noes"), nil, "zli.test: oh noes\n"},
-		{errors.New("oh noes"), []interface{}{"data", 666}, "zli.test: oh noes [data 666]\n"},
+		{errors.New("oh noes"), []any{"data", 666}, "zli.test: oh noes [data 666]\n"},
 
 		{mail.Address{Name: "asd", Address: "qwe"}, nil, "zli.test: {asd qwe}\n"},
-		{mail.Address{Name: "asd", Address: "qwe"}, []interface{}{"data", 666}, "zli.test: {asd qwe} [data 666]\n"},
+		{mail.Address{Name: "asd", Address: "qwe"}, []any{"data", 666}, "zli.test: {asd qwe} [data 666]\n"},
 	}
 
 	for i, tt := range tests {

@@ -29,7 +29,7 @@ func Program() string {
 
 // Error prints an error message to stderr prepended with the program name and
 // with a newline appended.
-func Errorf(s interface{}, args ...interface{}) {
+func Errorf(s any, args ...any) {
 	prog := Program()
 	if prog != "" {
 		prog += ": "
@@ -59,7 +59,7 @@ func Errorf(s interface{}, args ...interface{}) {
 var ExitCode = 1
 
 // Fatalf is like Errorf(), but will exit with a code of 1.
-func Fatalf(s interface{}, args ...interface{}) {
+func Fatalf(s any, args ...any) {
 	Errorf(s, args...)
 	Exit(ExitCode)
 }
