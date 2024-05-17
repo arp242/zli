@@ -42,6 +42,12 @@ func main() {
 			brightTest(os.Args[2])
 			return
 		default:
+			if len(os.Args[1]) > 0 && os.Args[1][0] == '#' {
+				c := zli.ColorHex(os.Args[1])
+				fmt.Printf("Foreground: %sXXX%s\n", c, zli.Reset)
+				fmt.Printf("Background: %sXXX%s\n", c.Bg(), zli.Reset)
+				return
+			}
 			zli.Fatalf("unknown command; supported commands: 'bg', 'brighten'")
 		}
 	}
@@ -102,6 +108,7 @@ func main() {
 	}
 	fmt.Printf("\nRun '%s bg' to set background instead of foreground.\n", zli.Program())
 	fmt.Printf("Run '%s brighten [color]' to test the Brighten() method.\n", zli.Program())
+	fmt.Printf("Run '%s #color' to test true colour.\n", zli.Program())
 }
 
 func brightTest(name string) {
