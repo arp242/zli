@@ -1,3 +1,3 @@
 module zgo.at/zli
 
-go 1.18
+go 1.21

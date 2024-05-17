@@ -107,8 +107,8 @@ w, h, err := zli.TerminalSize(os.Stdout.Fd())  // Get terminal size.
 
 ### Flag parsing
 zli comes with a flag parser which, IMHO, gives a better experience than Go's
-`flag` package. See [flag.markdown](/flag.markdown) for some rationale on "why
-this and not stdlib flags?"
+`flag` package. See [flag.md](/flag.md) for some rationale on "why this and not
+stdlib flags?"
 
 ```go
 // Create new flags; normally you'd pass in os.Args here.
@@ -121,7 +121,7 @@ var (
     exclude = f.StringList(nil, "e", "exclude")      // Can appear more than once.
     all     = f.Bool(false, "a", "all")              // Regular bool.
     format  = f.String("", "f", "format")            // Regular string.
-    asJSON  = f.Optional().String("", "-j", "json")  // Optional value
+    asJSON  = f.String("", "-j", "json")
 )
 
 // Shift the first argument (i.e. os.Args[1]). Useful to get the "subcommand"
