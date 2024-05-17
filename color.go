@@ -46,20 +46,20 @@ const (
 const (
 	Reset Color = 0
 	Bold  Color = 1 << (iota - 1)
-	Faint
+	Dim
 	Italic
 	Underline
-	BlinkSlow
-	BlinkRapid
-	ReverseVideo
+	Undercurl
+	Overline
+	Reverse
 	Concealed
-	CrossedOut
+	StrikeOut
 )
 
-var allAttrs = []Color{Bold, Faint, Italic, Underline, BlinkSlow, BlinkRapid, ReverseVideo, Concealed, CrossedOut}
+var allAttrs = []Color{Bold, Dim, Italic, Underline, Undercurl, Overline, Reverse, Concealed, StrikeOut}
 
 // ColorError signals there was an error in parsing a color hex attribute.
-const ColorError Color = CrossedOut << 1
+const ColorError Color = StrikeOut << 1
 
 // Color modes.
 const (
@@ -221,7 +221,14 @@ func (c Color) String() string {
 	attrs := make([]string, 0, 4)
 	for i := range allAttrs {
 		if c&allAttrs[i] != 0 {
-			attrs = append(attrs, strconv.Itoa(i+1))
+			switch allAttrs[i] {
+			case Overline:
+				attrs = append(attrs, "53")
+			case Undercurl:
+				attrs = append(attrs, "4:3")
+			default:
+				attrs = append(attrs, strconv.Itoa(i+1))
+			}
 		}
 	}
 

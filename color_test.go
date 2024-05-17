@@ -72,8 +72,8 @@ func TestColor(t *testing.T) {
 		{zli.Green.Bg().Brighten(1) | zli.Red, "\x1b[31;102m"},
 		{zli.Color256(99) | zli.Red.Bg() | zli.Bold | zli.Underline, "\x1b[1;4;38;5;99;41m"},
 
-		{zli.Bold | zli.Faint | zli.Italic | zli.Underline | zli.BlinkSlow | zli.BlinkRapid | zli.ReverseVideo | zli.Concealed | zli.CrossedOut,
-			"\x1b[1;2;3;4;5;6;7;8;9m"},
+		{zli.Bold | zli.Dim | zli.Italic | zli.Underline | zli.Undercurl | zli.Reverse | zli.Concealed | zli.StrikeOut | zli.Overline,
+			"\x1b[1;2;3;4;4:3;53;7;8;9m"},
 
 		{zli.Bold.Bg(), "\x1b[1m"},                 // Doesn't make much sense, but should work nonetheless.
 		{zli.Color(zli.Red.Bg().Bg()), "\x1b[41m"}, // Double .Bg() does nothing
