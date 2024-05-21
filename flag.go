@@ -9,7 +9,6 @@ import (
 	"runtime/pprof"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 type (
@@ -645,7 +644,7 @@ func (f *Flags) Profile() func() {
 	var stop []func()
 	go func() { // Make sure it gets written on ^C
 		s := make(chan os.Signal, 1)
-		signal.Notify(s, syscall.SIGHUP, syscall.SIGTERM, os.Interrupt /*SIGINT*/)
+		signal.Notify(s, signals...)
 		<-s
 		for _, f := range stop {
 			f()
