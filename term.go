@@ -10,9 +10,6 @@ import (
 )
 
 // IsTerminal reports if this file descriptor is an interactive terminal.
-//
-// TODO: this is a bit tricky now, as we can replace zli.Stdout with something
-// else; checking os.Stdout may not be correct in those cases.
 var IsTerminal = func(fd uintptr) bool { return term.IsTerminal(int(fd)) }
 
 // TerminalSize gets the dimensions of the given terminal.
@@ -30,6 +27,21 @@ var WantColor = func() bool {
 	_, ok := os.LookupEnv("NO_COLOR")
 	return os.Getenv("TERM") != "dumb" && term.IsTerminal(int(os.Stdout.Fd())) && !ok
 }()
+
+// MakeRaw puts the terminal in "raw mode", returning a function to restore the
+// state.
+//
+// If hideCursor is true the cursor will be hidden, and the returned function
+// will restore that as well.
+func MakeRaw(hideCursor bool) func() {
+	st, err := term.MakeRaw(int(os.Stdout.Fd()))
+	F(err)
+	r := func() {}
+	if hideCursor {
+		r = HideCursor()
+	}
+	return func() { r(); Move(9999, 1, ""); term.Restore(int(os.Stdout.Fd()), st); fmt.Println() }
+}
 
 // AskPassword interactively asks the user for a password and confirmation.
 //

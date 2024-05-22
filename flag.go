@@ -644,7 +644,7 @@ func (f *Flags) Profile() func() {
 	var stop []func()
 	go func() { // Make sure it gets written on ^C
 		s := make(chan os.Signal, 1)
-		signal.Notify(s, signals...)
+		signal.Notify(s, exitSignals...)
 		<-s
 		for _, f := range stop {
 			f()
