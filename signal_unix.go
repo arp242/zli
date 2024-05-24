@@ -10,14 +10,16 @@ import (
 
 var exitSignals = []os.Signal{syscall.SIGHUP, syscall.SIGTERM, os.Interrupt}
 
-// TerminalSizeChange is run if the terminal window size is changed.
-func TerminalSizeChange(f func()) {
+// TerminalSizeChange sends on the channel if the terminal window is resized.
+func TerminalSizeChange() <-chan struct{} {
 	winch := make(chan os.Signal, 1)
+	ch := make(chan struct{})
 	signal.Notify(winch, syscall.SIGWINCH)
 	go func() {
 		for {
 			<-winch
-			f()
+			ch <- struct{}{}
 		}
 	}()
+	return ch
 }

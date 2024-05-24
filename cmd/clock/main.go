@@ -21,15 +21,11 @@ var (
 
 func main() {
 	defer zli.MakeRaw(true)()
-	zli.TerminalSizeChange(func() {
-		var err error
-		width, height, err = zli.TerminalSize(os.Stdout.Fd())
-		zli.F(err)
-	})
 
 	var (
-		in = make(chan string)
-		t  = time.NewTicker(time.Second)
+		resize = zli.TerminalSizeChange()
+		in     = make(chan string)
+		t      = time.NewTicker(time.Second)
 	)
 	go func() {
 		b := make([]byte, 6)
@@ -46,11 +42,19 @@ func main() {
 			case "q", "\x03", "\x1b":
 				return
 			}
+		case <-resize:
+			var err error
+			width, height, err = zli.TerminalSize(os.Stdout.Fd())
+			zli.F(err)
 		case <-t.C:
 			t := time.Now()
-			n := []string{graphs[t.Hour()/10], graphs[t.Hour()%10], colon, graphs[t.Minute()/10], graphs[t.Minute()%10]}
+			n := []string{
+				graphs[t.Hour()/10], graphs[t.Hour()%10], colon,
+				graphs[t.Minute()/10], graphs[t.Minute()%10], colon,
+				graphs[t.Second()/10], graphs[t.Second()%10],
+			}
 
-			r, c := height/2-1, width/2-(25/2)
+			r, c := height/2-1, width/2-(40/2)-3
 			zli.EraseScreen()
 			zli.To(r, c, "")
 			for i, nn := range n {
@@ -73,7 +77,7 @@ X  X
 XXXX`[1:]
 var one = `
  XX
-X X
+  X
   X
   X
  XXX`[1:]

@@ -36,11 +36,13 @@ func main() {
 	redraw()
 
 	// Redraw on terminal size changes.
-	zli.TerminalSizeChange(func() {
-		width, height, err = zli.TerminalSize(os.Stdout.Fd())
-		zli.F(err)
-		redraw()
-	})
+	go func() {
+		for ch := zli.TerminalSizeChange(); ; <-ch {
+			width, height, err = zli.TerminalSize(os.Stdout.Fd())
+			zli.F(err)
+			redraw()
+		}
+	}()
 
 	// Main eventloop to read keys.
 	b := make([]byte, 3)
