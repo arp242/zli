@@ -2,7 +2,6 @@
 package main
 
 import (
-	"cmp"
 	"fmt"
 	"os"
 
@@ -85,7 +84,7 @@ func main() {
 	}
 }
 
-func max[T cmp.Ordered](x T, y ...T) T {
+func max(x int, y ...int) int {
 	m := x
 	for _, yy := range y {
 		if yy > m {
@@ -94,7 +93,7 @@ func max[T cmp.Ordered](x T, y ...T) T {
 	}
 	return m
 }
-func min[T cmp.Ordered](x T, y ...T) T {
+func min(x int, y ...int) int {
 	m := x
 	for _, yy := range y {
 		if yy < m {

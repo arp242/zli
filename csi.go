@@ -1,7 +1,6 @@
 package zli
 
 import (
-	"cmp"
 	"fmt"
 )
 
@@ -21,7 +20,7 @@ func HideCursor() func() {
 	return func() { fmt.Fprint(Stdout, "\x1b[?25h") }
 }
 
-func max[T cmp.Ordered](x T, y ...T) T {
+func max(x int, y ...int) int {
 	m := x
 	for _, yy := range y {
 		if yy > m {
