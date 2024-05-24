@@ -1,6 +1,9 @@
 package zli
 
-import "fmt"
+import (
+	"cmp"
+	"fmt"
+)
 
 // Erase line from the cursor to the end, leaving the cursor in the current
 // position.
@@ -16,6 +19,16 @@ func EraseScreen() { fmt.Fprint(Stdout, "\x1b[0;0H\x1b[J") }
 func HideCursor() func() {
 	fmt.Fprint(Stdout, "\x1b[?25l")
 	return func() { fmt.Fprint(Stdout, "\x1b[?25h") }
+}
+
+func max[T cmp.Ordered](x T, y ...T) T {
+	m := x
+	for _, yy := range y {
+		if yy > m {
+			m = yy
+		}
+	}
+	return m
 }
 
 // To sets the cursor at the given position and prints the text.

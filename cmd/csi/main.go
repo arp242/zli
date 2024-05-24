@@ -2,6 +2,7 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"os"
 
@@ -82,4 +83,23 @@ func main() {
 			redraw()
 		}
 	}
+}
+
+func max[T cmp.Ordered](x T, y ...T) T {
+	m := x
+	for _, yy := range y {
+		if yy > m {
+			m = yy
+		}
+	}
+	return m
+}
+func min[T cmp.Ordered](x T, y ...T) T {
+	m := x
+	for _, yy := range y {
+		if yy < m {
+			m = yy
+		}
+	}
+	return m
 }
