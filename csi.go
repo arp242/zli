@@ -9,7 +9,14 @@ import (
 func Erase() { fmt.Fprint(Stdout, "\x1b[K") }
 
 // Replacef replaces the current line.
-func Replacef(text string, a ...any) { fmt.Fprint(Stdout, "\x1b[K\r"); fmt.Fprintf(Stdout, text, a...) }
+func Replacef(text string, a ...any) {
+	fmt.Fprint(Stdout, "\x1b[K\r")
+	if len(a) > 0 {
+		fmt.Fprintf(Stdout, text, a...)
+	} else {
+		fmt.Fprint(Stdout, text)
+	}
+}
 
 // EraseScreen erases the entire screen and puts the cursor at position 1, 1.
 func EraseScreen() { fmt.Fprint(Stdout, "\x1b[0;0H\x1b[J") }
@@ -36,7 +43,11 @@ func max(x int, y ...int) int {
 func To(row, col int, text string, a ...any) {
 	fmt.Fprintf(Stdout, "\x1b[%d;%dH", max(row, 1), max(col, 1))
 	if text != "" {
-		fmt.Fprintf(Stdout, text, a...)
+		if len(a) > 0 {
+			fmt.Fprintf(Stdout, text, a...)
+		} else {
+			fmt.Fprint(Stdout, text)
+		}
 	}
 }
 
@@ -56,7 +67,11 @@ func Move(row, col int, text string, a ...any) {
 		fmt.Fprintf(Stdout, "\x1b[%dD", -col)
 	}
 	if text != "" {
-		fmt.Fprintf(Stdout, text, a...)
+		if len(a) > 0 {
+			fmt.Fprintf(Stdout, text, a...)
+		} else {
+			fmt.Fprint(Stdout, text)
+		}
 	}
 }
 
@@ -78,6 +93,10 @@ func Modify(line, char int, text string, a ...any) {
 		fmt.Fprintf(Stdout, "\x1b[%dP", -char)
 	}
 	if text != "" {
-		fmt.Fprintf(Stdout, text, a...)
+		if len(a) > 0 {
+			fmt.Fprintf(Stdout, text, a...)
+		} else {
+			fmt.Fprint(Stdout, text)
+		}
 	}
 }
