@@ -7,6 +7,7 @@ package term
 import (
 	"fmt"
 	"runtime"
+	"syscall"
 )
 
 type state struct{}

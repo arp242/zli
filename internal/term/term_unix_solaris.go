@@ -1,8 +1,8 @@
-// Copyright 2019 The Go Authors. All rights reserved.
+// Copyright 2021 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build aix || darwin || dragonfly || freebsd || linux || netbsd || openbsd || zos
+//go:build solaris
 
 package term
 
@@ -12,30 +12,74 @@ import (
 	"unsafe"
 )
 
+const ioctlReadTermios = 0x540d  // syscall.TCGETS
+const ioctlWriteTermios = 0x540e // syscall.TCSETS
+
+func errnoErr(e syscall.Errno) error { return e }
+
+type syscallFunc uintptr
+
+//go:linkname procioctl libc_ioctl
+
+var (
+	procioctl syscallFunc
+)
+
+func ioctlPtrRet(fd int, req int, arg unsafe.Pointer) (ret int, err error) {
+	r0, _, e1 := sysvicall6(uintptr(unsafe.Pointer(&procioctl)), 3, uintptr(fd), uintptr(req), uintptr(arg), 0, 0, 0)
+	ret = int(r0)
+	if e1 != 0 {
+		err = errnoErr(e1)
+	}
+	return
+}
+func ioctlPtr(fd int, req int, arg unsafe.Pointer) (err error) {
+	_, err = ioctlPtrRet(fd, req, arg)
+	return err
+}
+
+type termios struct {
+	Iflag uint32
+	Oflag uint32
+	Cflag uint32
+	Lflag uint32
+	Cc    [16]uint8
+}
+
+// func sysvicall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
+
+func sysvicall6(trap, nargs, a1, a2, a3, a4, a5, a6 uintptr) (r1, r2 uintptr, err syscall.Errno)
+
 type state struct {
 	termios termios
 }
 
-type termios struct {
-	Iflag, Oflag, Cflag, Lflag uint32
-	Line                       uint8
-	Cc                         [19]uint8
-	Ispeed, Ospeed             uint32
-}
+// func IoctlGetTermios(fd int, req int) (*termios, error) {
+// }
 
 func getTermios(fd int) (termios, error) {
 	var t termios
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), ioctlReadTermios, uintptr(unsafe.Pointer(&t)))
-	if errno > 0 {
-		return t, fmt.Errorf("getTermios: %s", errno)
+	err := ioctlPtr(fd, ioctlReadTermios, unsafe.Pointer(&t))
+	if err != nil {
+		return t, fmt.Errorf("getTermios: %s", err)
 	}
 	return t, nil
+
+	// var t termios
+	// _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), ioctlReadTermios, uintptr(unsafe.Pointer(&t)))
+	// if errno > 0 {
+	// 	return t, fmt.Errorf("getTermios: %s", errno)
+	// }
+	// return t, nil
 }
 
+// func IoctlSetTermios(fd int, req int, value *termios) error {
+// }
 func setTermios(fd int, t termios) error {
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&t)))
-	if errno > 0 {
-		return fmt.Errorf("setTermios: %s", errno)
+	err := ioctlPtr(fd, ioctlWriteTermios, unsafe.Pointer(&t))
+	//_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&t)))
+	if err != nil {
+		return fmt.Errorf("setTermios: %s", err)
 	}
 	return nil
 }
@@ -83,16 +127,16 @@ func restore(fd int, state *State) error {
 	return setTermios(fd, state.termios)
 }
 
+// ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
+// func IoctlGetWinsize(fd int, req int) (*Winsize, error) {
+
 func getSize(fd int) (width, height int, err error) {
 	var size struct {
 		Height, Width  uint16
 		Xpixel, Ypixel uint16
 	}
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(fd), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&size)))
-	if errno > 0 || size.Width <= 0 || size.Height <= 0 {
-		return 0, 0, fmt.Errorf("%v", errno)
-	}
-	return int(size.Width), int(size.Height), nil
+	err = ioctlPtr(fd, syscall.TIOCGWINSZ, unsafe.Pointer(&size))
+	return int(size.Width), int(size.Height), err
 }
 
 // passwordReader is an io.Reader that reads from a specific file descriptor.
