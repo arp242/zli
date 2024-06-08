@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"zgo.at/term"
+	"zgo.at/zli/internal/term"
 )
 
 func TestIsTerminalTempFile(t *testing.T) {
