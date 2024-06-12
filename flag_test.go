@@ -587,6 +587,82 @@ func TestFlags(t *testing.T) {
 				bool 1 → true
 				args   → 0 []
 			`, ""},
+
+		// Short flags with values
+		{"short without space", []string{"prog", "-w8"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Int(0, "w"),
+				}
+			}, `
+				int 1    → 8
+				args     → 0 []
+			`, ""},
+		{"short without space", []string{"prog", "-bw8", "X"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Bool(false, "b"),
+					f.Int(0, "w"),
+				}
+			}, `
+				bool 1   → true
+				int 2    → 8
+				args     → 1 [X]
+			`, ""},
+		{"short without space", []string{"prog", "-w", "81"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Bool(false, "b"),
+					f.Int(0, "w"),
+				}
+			}, `
+				bool 1   → false
+				int 2    → 81
+				args     → 0 []
+			`, ``},
+		{"short without space", []string{"prog", "-bw81", "X"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Bool(false, "b"),
+					f.Int(0, "w"),
+				}
+			}, `
+				bool 1   → true
+				int 2    → 81
+				args     → 1 [X]
+			`, ``},
+		{"short without space", []string{"prog", "-w81"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Bool(false, "1"),
+					f.Int(0, "w"),
+				}
+			}, `
+				bool 1   → false
+				int 2    → 81
+				args     → 0 []
+			`, ``},
+		{"short without space", []string{"prog", "-w18"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Bool(false, "1"),
+					f.Int(0, "w"),
+				}
+			}, `
+				bool 1   → false
+				int 2    → 18
+				args     → 0 []
+			`, ``},
+		// Not when it's a bool
+		{"short without space", []string{"prog", "-w8"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Bool(false, "w"),
+				}
+			}, `
+				bool 1   → false
+				args     → 1 [-w8]
+			`, `unknown flag: "-w8"`},
 	}
 
 	type (

@@ -245,40 +245,66 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 
 	// Always include CPU/memory profile; doesn't actually do anything until
 	// Flags.Profile() is called.
-	f.cpuProf = f.String("", "cpuprofile")
-	f.memProf = f.String("", "memprofile")
+	f.cpuProf = f.String("", "cpuprofile", "cpu-profile")
+	f.memProf = f.String("", "memprofile", "mem-profile")
 
 	// Modify f.Args to split out grouped boolean values: "prog -ab" becomes
 	// "prog -a -b"
 	args := make([]string, 0, len(f.Args))
 	for _, arg := range f.Args {
+		/// Skip non-flags.
 		if !strings.HasPrefix(arg, "-") || arg == "-" {
 			args = append(args, arg)
 			continue
 		}
 
+		/// Try to match the full string first, e.g. "-help", "-color".
 		_, ok := f.match(arg)
 		if ok {
 			args = append(args, arg)
 			continue
 		}
+		/// Don't split out --long options, only -short ones.
+		if strings.HasPrefix(arg, "--") {
+			args = append(args, arg)
+			continue
+		}
 
-		split := strings.Split(arg[1:], "")
-		found := true
-		for _, s := range split {
-			_, ok := f.match(s)
+		/// No match for the long string: test each individual letter.
+		var (
+			split    = strings.Split(arg[1:], "")
+			found    = true
+			shortarg = -1
+		)
+		for i, s := range split {
+			val, ok := f.match(s)
 			if !ok {
 				found = false
 				break
 			}
+			/// This short argument accepts a value, so so assume everything
+			/// after this will be an an argument for that (without spaces):
+			///
+			///   cut -f1
+			///   cut -wf1
+			if acceptsValue(val) {
+				shortarg = i + 1
+				break
+			}
 		}
-		// "-arg -42"; we reject unknown flags later.
+		/// "-arg -42"; we reject unknown flags later.
 		if !found {
 			args = append(args, arg)
 			continue
 		}
-		for _, s := range split {
-			args = append(args, "-"+s)
+		for i, s := range split {
+			if i == shortarg {
+				args = append(args, s)
+			} else if shortarg > -1 && i > shortarg {
+				args[len(args)-1] += s
+			} else {
+				args = append(args, "-"+s)
+			}
 		}
 	}
 	f.Args = args
@@ -436,6 +462,15 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 	}
 	f.Args = p
 	return nil
+}
+
+func acceptsValue(val flagValue) bool {
+	switch val.value.(type) {
+	case nil, flagBool, flagIntCounter:
+		return false
+	default:
+		return true
+	}
 }
 
 func (f *Flags) match(arg string) (flagValue, bool) {
