@@ -40,7 +40,7 @@ func MakeRaw(hideCursor bool) func() {
 	if hideCursor {
 		r = HideCursor()
 	}
-	return func() { r(); Move(9999, 1, ""); term.Restore(int(os.Stdout.Fd()), st); fmt.Println() }
+	return func() { r(); term.Restore(int(os.Stdout.Fd()), st); fmt.Println() }
 }
 
 // AskPassword interactively asks the user for a password and confirmation.
