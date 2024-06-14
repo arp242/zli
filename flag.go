@@ -143,12 +143,12 @@ func (e ErrCommandAmbiguous) Error() string {
 // matched as an abbreviation as long as it's unambiguous; if you have "search"
 // and "identify" then "i", "id", etc. will all return "identify". If you have
 // the commands "search" and "see", then "s" or "se" are ambiguous, and it will
-// return an ErrCommandAmbiguous error.
+// return an [ErrCommandAmbiguous] error.
 //
 // Commands can also contain aliases as "alias=cmd"; for example "ci=commit".
 //
-// It will return ErrCommandNoneGiven if there is no command, and
-// ErrCommandUnknown if the command is not found.
+// Return [ErrCommandNoneGiven] if there is no command, and [ErrCommandUnknown]
+// if the command is not found.
 func (f *Flags) ShiftCommand(cmds ...string) (string, error) {
 	var (
 		pushback []string
@@ -214,6 +214,18 @@ var (
 	//     }
 	AllowUnknown = func() parseOpt { return func(o *parseOpts) { o.allowUnknown = true } }
 
+	// AllowMultiple indicates that specifying a flag more than once is not an
+	// error.
+	//
+	// For boolean flags any repeated flags are simply ignored.
+	//
+	// For flags that accept a value the last is used; so for:
+	//
+	//   % prog -w 50 -w 90
+	//
+	// "-w" will have the value of "80".
+	AllowMultiple = func() parseOpt { return func(o *parseOpts) { o.allowMultiple = true } }
+
 	// Positional sets the lower and upper bounds for the number of positional
 	// arguments.
 	//
@@ -230,8 +242,9 @@ var (
 
 type (
 	parseOpts struct {
-		allowUnknown bool
-		pos          [2]int
+		allowUnknown  bool
+		allowMultiple bool
+		pos           [2]int
 	}
 	parseOpt func(*parseOpts)
 )
@@ -360,13 +373,17 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 			return v, true, true
 		}
 
-		// TODO: it might make more sense to have two interfaces: singleSetter
-		// and multiSetter.
-		if set := flag.value.(setter); set.Set() {
-			switch flag.value.(type) {
-			case flagIntCounter, flagStringList, flagIntList, flagBool: // Not an error.
-			default:
-				return &ErrFlagDouble{a}
+		// For resetting the default in case of optional and given more than
+		// once.
+		if !opt.allowMultiple {
+			// TODO: it might make more sense to have two interfaces: singleSetter
+			// and multiSetter.
+			if set := flag.value.(setter); set.Set() {
+				switch flag.value.(type) {
+				case flagIntCounter, flagStringList, flagIntList, flagBool: // Not an error.
+				default:
+					return &ErrFlagDouble{a}
+				}
 			}
 		}
 

@@ -663,6 +663,47 @@ func TestFlags(t *testing.T) {
 				bool 1   → false
 				args     → 1 [-w8]
 			`, `unknown flag: "-w8"`},
+
+		// AllowMultiple
+		{"multiple flags opt:multiple", []string{"prog", "-w10"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Int(0, "w"),
+				}
+			}, `
+				int 1    → 10
+				args     → 0 []
+			`, ``},
+		{"multiple flags opt:multiple", []string{"prog", "-w10", "-w20"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Int(0, "w"),
+				}
+			}, `
+				int 1    → 20
+				args     → 0 []
+			`, ``},
+		{"multiple flags opt:multiple", []string{"prog", "-w10", "-w20"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Optional().Int(0, "w"),
+				}
+			}, `
+				int 1    → 20
+				args     → 0 []
+			`, ``},
+
+		// TODO: maybe this should go bak to 0? Not sure what makes the most
+		// sense here.
+		{"multiple flags opt:multiple", []string{"prog", "-w10", "-w"},
+			func(f *zli.Flags) []any {
+				return []any{
+					f.Optional().Int(0, "w"),
+				}
+			}, `
+				int 1    → 10
+				args     → 0 []
+			`, ``},
 	}
 
 	type (
@@ -679,7 +720,13 @@ func TestFlags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			flag := zli.NewFlags(tt.args)
 			setFlags := tt.flags(&flag)
-			err := flag.Parse()
+
+			var err error
+			if strings.Contains(tt.name, "opt:multiple") { // Hackity hack!
+				err = flag.Parse(zli.AllowMultiple())
+			} else {
+				err = flag.Parse()
+			}
 			if !errorContains(err, tt.wantErr) {
 				t.Fatalf("wrong error\nout:  %v\nwant: %v", err, tt.wantErr)
 			}
