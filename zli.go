@@ -76,11 +76,11 @@ func F(err error) {
 // the user the program is reading from stdin.
 var StdinMessage = "reading from stdin..."
 
-// InputOrFile will return a reader connected to stdin if path is "" or "-", or
-// open a path for any other value.
+// InputOrFile returns a reader connected to stdin if path is "" or "-", or open
+// a path for any other value. The Close method for stdin is a no-op.
 //
-// It will print StdinMessage to stderr notifying the user it's reading from
-// stdin if the terminal is interactive and quiet is false.
+// It prints StdinMessage to stderr notifying the user it's reading from stdin
+// if the terminal is interactive and quiet is false.
 // See: https://www.arp242.net/read-stdin.html
 func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 	if path != "" && path != "-" {
@@ -95,7 +95,36 @@ func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 		fmt.Fprintf(Stderr, Program()+": "+StdinMessage+"\r")
 		os.Stderr.Sync()
 	}
-	return ioutil.NopCloser(Stdin), nil
+	return io.NopCloser(Stdin), nil
+}
+
+type nopCloser struct{ io.Writer }
+
+func (nopCloser) Close() error { return nil }
+
+// OutputOrFile returns a writer connected to stdout if path is "" or "-", or
+// open a path for any other value. The Close method for stdout is a no-op.
+//
+// The create function is used to open the file; the simplest is to use
+// [os.Create]:
+//
+//	zli.OutputOrFile(path, os.Create)
+//
+// Or to prevent clobbering existing files:
+//
+//	out, err := zli.OutputOrFile(outFlag.String(), func(p string) (*os.File, error) {
+//	    return os.OpenFile(p, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o666)
+//	})
+func OutputOrFile(path string, create func(string) (*os.File, error)) (io.WriteCloser, error) {
+	if path != "" && path != "-" {
+		fp, err := create(path)
+		//fp, err := os.Create(path)
+		if err != nil {
+			err = fmt.Errorf("zli.OutputOrFile: %w", err)
+		}
+		return fp, err
+	}
+	return nopCloser{Stdout}, nil
 }
 
 // InputOrArgs reads arguments separated by sep from stdin if args is empty, or
