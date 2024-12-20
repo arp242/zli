@@ -518,6 +518,11 @@ type (
 		s *bool
 		o bool
 	}
+	flagInt32 struct {
+		v *int32
+		s *bool
+		o bool
+	}
 	flagInt64 struct {
 		v *int64
 		s *bool
@@ -548,6 +553,7 @@ type (
 func (f flagBool) Pointer() *bool           { return f.v }
 func (f flagString) Pointer() *string       { return f.v }
 func (f flagInt) Pointer() *int             { return f.v }
+func (f flagInt32) Pointer() *int32         { return f.v }
 func (f flagInt64) Pointer() *int64         { return f.v }
 func (f flagFloat64) Pointer() *float64     { return f.v }
 func (f flagIntCounter) Pointer() *int      { return f.v }
@@ -557,6 +563,7 @@ func (f flagIntList) Pointer() *[]int       { return f.v }
 func (f flagBool) Bool() bool              { return *f.v }
 func (f flagString) String() string        { return *f.v }
 func (f flagInt) Int() int                 { return *f.v }
+func (f flagInt32) Int32() int32           { return *f.v }
 func (f flagInt64) Int64() int64           { return *f.v }
 func (f flagFloat64) Float64() float64     { return *f.v }
 func (f flagIntCounter) Int() int          { return *f.v }
@@ -584,6 +591,7 @@ func (f flagStringList) StringsSplit(sep string) []string {
 func (f flagBool) Set() bool       { return *f.s }
 func (f flagString) Set() bool     { return *f.s }
 func (f flagInt) Set() bool        { return *f.s }
+func (f flagInt32) Set() bool      { return *f.s }
 func (f flagInt64) Set() bool      { return *f.s }
 func (f flagFloat64) Set() bool    { return *f.s }
 func (f flagIntCounter) Set() bool { return *f.s }
@@ -639,6 +647,14 @@ func (f *Flags) String(def, name string, aliases ...string) flagString {
 }
 func (f *Flags) Int(def int, name string, aliases ...string) flagInt {
 	v := flagInt{v: &def, s: new(bool), o: f.optional}
+	if f.optional {
+		f.optional = false
+	}
+	f.append(v, name, aliases...)
+	return v
+}
+func (f *Flags) Int32(def int32, name string, aliases ...string) flagInt32 {
+	v := flagInt32{v: &def, s: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
