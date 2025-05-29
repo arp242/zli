@@ -491,7 +491,7 @@ func acceptsValue(val flagValue) bool {
 }
 
 func (f *Flags) match(arg string) (flagValue, bool) {
-	arg = strings.TrimLeft(arg, "-")
+	arg = strings.ReplaceAll(strings.TrimLeft(arg, "-"), "_", "-")
 	for _, flag := range f.flags {
 		for _, name := range flag.names {
 			if name == arg || strings.HasPrefix(arg, name+"=") {
@@ -600,11 +600,11 @@ func (f flagIntList) Set() bool    { return *f.s }
 
 func (f *Flags) append(v any, n string, a ...string) {
 	for i := range a {
-		a[i] = strings.TrimLeft(a[i], "-")
+		a[i] = strings.ReplaceAll(strings.TrimLeft(a[i], "-"), "_", "-")
 	}
 	f.flags = append(f.flags, flagValue{
 		value: v,
-		names: append([]string{strings.TrimLeft(n, "-")}, a...),
+		names: append([]string{strings.ReplaceAll(strings.TrimLeft(n, "-"), "_", "-")}, a...),
 	})
 }
 

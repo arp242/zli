@@ -693,7 +693,7 @@ func TestFlags(t *testing.T) {
 				args     → 0 []
 			`, ``},
 
-		// TODO: maybe this should go bak to 0? Not sure what makes the most
+		// TODO: maybe this should go back to 0? Not sure what makes the most
 		// sense here.
 		{"multiple flags opt:multiple", []string{"prog", "-w10", "-w"},
 			func(f *zli.Flags) []any {
@@ -704,6 +704,26 @@ func TestFlags(t *testing.T) {
 				int 1    → 10
 				args     → 0 []
 			`, ``},
+
+		// - and _ are identical
+		{"- and _ are identical", []string{"prog", "-st-r", "a", "-st_r=b", "-cn-t", "-cn_t", "-boo_l"},
+			func(f *zli.Flags) []any {
+				return []any{f.StringList(nil, "st-r"), f.IntCounter(0, "cn-t"), f.Bool(false, "boo-l")}
+			}, `
+				list 1 → [a b]
+				int 2  → 2
+				bool 3 → true
+				args   → 0 []
+			`, ""},
+		{"- and _ are identical", []string{"prog", "-st-r", "a", "-st_r=b", "-cn-t", "-cn_t", "-boo-l"},
+			func(f *zli.Flags) []any {
+				return []any{f.StringList(nil, "st_r"), f.IntCounter(0, "cn_t"), f.Bool(false, "boo_l")}
+			}, `
+				list 1 → [a b]
+				int 2  → 2
+				bool 3 → true
+				args   → 0 []
+			`, ""},
 	}
 
 	type (
