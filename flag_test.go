@@ -1,7 +1,9 @@
 package zli_test
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -67,7 +69,7 @@ func ExampleFlags() {
 }
 
 func ExampleFlags_ShiftCommand() {
-	f := zli.NewFlags(append([]string{"prog", "i"}))
+	f := zli.NewFlags([]string{"prog", "i"})
 
 	// Known commands.
 	commands := []string{"help", "version", "verbose", "install"}
@@ -885,6 +887,98 @@ func TestDoubleParse(t *testing.T) {
 	if len(f.Args) != 1 && f.Args[1] != "cmd" {
 		t.Error(f.Args)
 	}
+}
+
+// TODO: test single-letters are not overriden
+func TestFromEnv(t *testing.T) {
+	t.Run("basic", func(t *testing.T) {
+		f := zli.NewFlags([]string{"prog", "-str1=cli-value", "-bool1"})
+		var (
+			str1  = f.String("", "str1")
+			str2  = f.String("", "str2")
+			bool1 = f.Bool(false, "bool1")
+			bool2 = f.Bool(false, "bool2", "alt-bool2")
+			bool3 = f.Bool(false, "bool3")
+			b     = f.Bool(false, "b")
+		)
+
+		os.Setenv("XX_STR1", "str1 from env")
+		os.Setenv("XX_STR2", "str2 from env")
+		os.Setenv("XX_BOOL2", "true")
+		os.Setenv("XX_BOOL3", "")
+		os.Setenv("XX_B", "")
+		defer func() {
+			for _, k := range []string{"STR1", "STR2", "BOOL2", "BOOL3", "B"} {
+				os.Unsetenv("XX_" + k)
+			}
+		}()
+		if err := f.Parse(zli.FromEnv("XX")); err != nil {
+			t.Fatal(err)
+		}
+
+		have := fmt.Sprintf("str1=%q str2=%q bool1=%t bool2=%t bool3=%t b=%t",
+			str1, str2, bool1.Bool(), bool2.Bool(), bool3.Bool(), b.Bool())
+		want := `str1="cli-value" str2="str2 from env" bool1=true bool2=true bool3=true b=false`
+		if have != want {
+			t.Errorf("\nhave: %s\nwant: %s", have, want)
+		}
+	})
+
+	t.Run("append", func(t *testing.T) {
+		f := zli.NewFlags([]string{"prog", "-list1=cli1,cli2", "-count1"})
+		var (
+			list1  = f.StringList(nil, "list1")
+			list2  = f.StringList(nil, "list2")
+			count1 = f.IntCounter(0, "count1")
+			count2 = f.IntCounter(0, "count2")
+			count3 = f.IntCounter(0, "count3")
+		)
+
+		os.Setenv("XX_LIST1", "env1,env2")
+		os.Setenv("XX_LIST2", "env1,env2")
+		os.Setenv("XX_COUNT2", "1")
+		os.Setenv("XX_COUNT3", "2")
+		defer func() {
+			for _, k := range []string{"LIST1", "LIST2", "COUNT2", "COUNT3"} {
+				os.Unsetenv("XX_" + k)
+			}
+		}()
+		if err := f.Parse(zli.FromEnv("XX")); err != nil {
+			t.Fatal(err)
+		}
+
+		have := fmt.Sprintf("list1=%q list2=%q count1=%d count2=%d count3=%d",
+			list1.StringsSplit(","), list2.StringsSplit(","), count1.Int(), count2.Int(), count3.Int())
+		want := `list1=["cli1" "cli2"] list2=["env1" "env2"] count1=1 count2=1 count3=2`
+		if have != want {
+			t.Errorf("\nhave: %s\nwant: %s", have, want)
+		}
+	})
+
+	t.Run("error unknown", func(t *testing.T) {
+		f := zli.NewFlags([]string{"prog"})
+
+		os.Setenv("XX_FOO", "aa")
+		os.Setenv("XX_TWO", "aa")
+		os.Setenv("XXBAR", "bb")
+		os.Setenv("X_FOO", "bb")
+		defer func() {
+			for _, k := range []string{"XX_FOO", "XX_TWO", "XXBAR", "X_FOO"} {
+				os.Unsetenv(k)
+			}
+		}()
+		err := f.Parse(zli.FromEnv("XX"))
+		if err == nil {
+			t.Fatal("err is nil")
+		}
+		var uErr zli.ErrUnknownEnv
+		if !errors.As(err, &uErr) {
+			t.Fatalf("wrong error type: %#v", err)
+		}
+		if uErr.Error() != `unknown environment variables starting with "XX_": "XX_FOO", "XX_TWO"` {
+			t.Errorf("wrong error message: %v", uErr)
+		}
+	})
 }
 
 // Just to make sure it's not ridiculously slow or anything.

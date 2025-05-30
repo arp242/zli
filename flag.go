@@ -31,6 +31,15 @@ type (
 	ErrPositional struct {
 		min, max, n int
 	}
+
+	// ErrUnknownEnv is used when there are environment variables starting with
+	// prefix that do not correspond to any flags. This is returned after
+	// processing all environment variables so it's safe to only log a warning
+	// (or completely ignore).
+	ErrUnknownEnv struct {
+		Prefix string
+		Vars   []string
+	}
 )
 
 func (e ErrFlagInvalid) Unwrap() error { return e.err }
@@ -56,6 +65,17 @@ func (e ErrPositional) Error() string {
 	default:
 		return fmt.Sprintf("between %d and %d positional arguments accepted, but %d given", e.min, e.max, e.n)
 	}
+}
+func (e ErrUnknownEnv) Error() string {
+	b := new(strings.Builder)
+	fmt.Fprintf(b, "unknown environment variables starting with %q: ", e.Prefix)
+	for i, v := range e.Vars {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		fmt.Fprintf(b, "%q", v)
+	}
+	return b.String()
 }
 
 // Flags are a set of parsed flags.
@@ -91,7 +111,10 @@ type flagValue struct {
 	value any
 }
 
-type setter interface{ Set() bool }
+type setter interface {
+	Set() bool
+	setFromEnv() bool
+}
 
 // NewFlags creates a new Flags from os.Args.
 func NewFlags(args []string) Flags {
@@ -238,12 +261,27 @@ var (
 
 	// NoPositional is a shortcut for Positional(-1, 0)
 	NoPositional = func() parseOpt { return func(o *parseOpts) { o.pos = [2]int{-1, -1} } }
+
+	// FromEnv reads defaults from the environment.
+	//
+	// The name of the environment variable is "prefix + _ + flag name", so
+	// -flag would be PREFIX_FLAG. Both the mandatory flag name and optional
+	// aliases can be used. Only flag names longer than one letter are
+	// overridden; dashes are replaced with an underscore.
+	//
+	// Parse returns an [ErrUnknownEnv] error if there are environment variables
+	// starting with prefix that do not correspond to any flags, to prevent
+	// typos. This is returned after processing all environment variables so
+	// it's safe to only log a warning (or completely ignore).
+	FromEnv = func(prefix string) parseOpt { return func(o *parseOpts) { o.fromEnv, o.envPrefix = true, prefix } }
 )
 
 type (
 	parseOpts struct {
 		allowUnknown  bool
 		allowMultiple bool
+		fromEnv       bool
+		envPrefix     string
 		pos           [2]int
 	}
 	parseOpt func(*parseOpts)
@@ -254,6 +292,13 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 	var opt parseOpts
 	for _, o := range opts {
 		o(&opt)
+	}
+
+	if opt.fromEnv {
+		err := f.fromEnv(opt.envPrefix)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Always include CPU/memory profile; doesn't actually do anything until
@@ -378,7 +423,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 		if !opt.allowMultiple {
 			// TODO: it might make more sense to have two interfaces: singleSetter
 			// and multiSetter.
-			if set := flag.value.(setter); set.Set() {
+			if set := flag.value.(setter); set.Set() && !set.setFromEnv() {
 				switch flag.value.(type) {
 				case flagIntCounter, flagStringList, flagIntList, flagBool: // Not an error.
 				default:
@@ -393,15 +438,16 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 		)
 		switch v := flag.value.(type) {
 		case flagBool:
-			*v.s = true
-			*v.v = true
+			*v.s, *v.e, *v.v = true, false, true
 		case flagString:
 			val, *v.s, hasValue = next(v.o)
+			*v.e = false
 			if hasValue {
 				*v.v = val
 			}
 		case flagInt:
 			val, *v.s, hasValue = next(v.o)
+			*v.e = false
 			if hasValue {
 				x, err := strconv.ParseInt(val, 0, 64)
 				if err != nil {
@@ -414,6 +460,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 			}
 		case flagInt64:
 			val, *v.s, hasValue = next(v.o)
+			*v.e = false
 			if hasValue {
 				x, err := strconv.ParseInt(val, 0, 64)
 				if err != nil {
@@ -426,6 +473,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 			}
 		case flagFloat64:
 			val, *v.s, hasValue = next(v.o)
+			*v.e = false
 			if hasValue {
 				x, err := strconv.ParseFloat(val, 64)
 				if err != nil {
@@ -437,19 +485,22 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 				*v.v = x
 			}
 		case flagIntCounter:
-			*v.s = true
+			if *v.e {
+				*v.v = 0
+			}
+			*v.s, *v.e = true, false
 			*v.v++
 		case flagStringList:
-			if !*v.s {
+			if !*v.s || *v.e {
 				*v.v = nil
 			}
+			*v.e = false
 			n, s, hasValue := next(v.o)
 			if hasValue {
-				*v.s = s
-				*v.v = append(*v.v, n)
+				*v.s, *v.v = s, append(*v.v, n)
 			}
 		case flagIntList:
-			if !*v.s {
+			if !*v.s || *v.e {
 				*v.v = nil
 			}
 
@@ -462,9 +513,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 					}
 					return ErrFlagInvalid{a, err, "number"}
 				}
-
-				*v.s = s
-				*v.v = append(*v.v, int(x))
+				*v.s, *v.e, *v.v = s, false, append(*v.v, int(x))
 			}
 		}
 		if err != nil {
@@ -491,7 +540,7 @@ func acceptsValue(val flagValue) bool {
 }
 
 func (f *Flags) match(arg string) (flagValue, bool) {
-	arg = strings.ReplaceAll(strings.TrimLeft(arg, "-"), "_", "-")
+	arg = strings.ToLower(strings.ReplaceAll(strings.TrimLeft(arg, "-"), "_", "-"))
 	for _, flag := range f.flags {
 		for _, name := range flag.names {
 			if name == arg || strings.HasPrefix(arg, name+"=") {
@@ -504,49 +553,49 @@ func (f *Flags) match(arg string) (flagValue, bool) {
 
 type (
 	flagBool struct {
-		v *bool
-		s *bool
-		o bool // Doesn't make much sense here, but just for consistency.
+		v    *bool
+		s, e *bool
+		o    bool // Doesn't make much sense here, but just for consistency.
 	}
 	flagString struct {
-		v *string
-		s *bool
-		o bool
+		v    *string
+		s, e *bool
+		o    bool
 	}
 	flagInt struct {
-		v *int
-		s *bool
-		o bool
+		v    *int
+		s, e *bool
+		o    bool
 	}
 	flagInt32 struct {
-		v *int32
-		s *bool
-		o bool
+		v    *int32
+		s, e *bool
+		o    bool
 	}
 	flagInt64 struct {
-		v *int64
-		s *bool
-		o bool
+		v    *int64
+		s, e *bool
+		o    bool
 	}
 	flagFloat64 struct {
-		v *float64
-		s *bool
-		o bool
+		v    *float64
+		s, e *bool
+		o    bool
 	}
 	flagIntCounter struct {
-		v *int
-		s *bool
-		o bool
+		v    *int
+		s, e *bool
+		o    bool
 	}
 	flagStringList struct {
-		v *[]string
-		s *bool
-		o bool
+		v    *[]string
+		s, e *bool
+		o    bool
 	}
 	flagIntList struct {
-		v *[]int
-		s *bool
-		o bool
+		v    *[]int
+		s, e *bool
+		o    bool
 	}
 )
 
@@ -598,13 +647,23 @@ func (f flagIntCounter) Set() bool { return *f.s }
 func (f flagStringList) Set() bool { return *f.s }
 func (f flagIntList) Set() bool    { return *f.s }
 
+func (f flagBool) setFromEnv() bool       { return *f.e }
+func (f flagString) setFromEnv() bool     { return *f.e }
+func (f flagInt) setFromEnv() bool        { return *f.e }
+func (f flagInt32) setFromEnv() bool      { return *f.e }
+func (f flagInt64) setFromEnv() bool      { return *f.e }
+func (f flagFloat64) setFromEnv() bool    { return *f.e }
+func (f flagIntCounter) setFromEnv() bool { return *f.e }
+func (f flagStringList) setFromEnv() bool { return *f.e }
+func (f flagIntList) setFromEnv() bool    { return *f.e }
+
 func (f *Flags) append(v any, n string, a ...string) {
 	for i := range a {
-		a[i] = strings.ReplaceAll(strings.TrimLeft(a[i], "-"), "_", "-")
+		a[i] = strings.ToLower(strings.ReplaceAll(strings.TrimLeft(a[i], "-"), "_", "-"))
 	}
 	f.flags = append(f.flags, flagValue{
 		value: v,
-		names: append([]string{strings.ReplaceAll(strings.TrimLeft(n, "-"), "_", "-")}, a...),
+		names: append([]string{strings.ToLower(strings.ReplaceAll(strings.TrimLeft(n, "-"), "_", "-"))}, a...),
 	})
 }
 
@@ -630,7 +689,7 @@ func (f *Flags) Optional() *Flags {
 // }
 
 func (f *Flags) Bool(def bool, name string, aliases ...string) flagBool {
-	v := flagBool{v: &def, s: new(bool), o: f.optional}
+	v := flagBool{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -638,7 +697,7 @@ func (f *Flags) Bool(def bool, name string, aliases ...string) flagBool {
 	return v
 }
 func (f *Flags) String(def, name string, aliases ...string) flagString {
-	v := flagString{v: &def, s: new(bool), o: f.optional}
+	v := flagString{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -646,7 +705,7 @@ func (f *Flags) String(def, name string, aliases ...string) flagString {
 	return v
 }
 func (f *Flags) Int(def int, name string, aliases ...string) flagInt {
-	v := flagInt{v: &def, s: new(bool), o: f.optional}
+	v := flagInt{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -654,7 +713,7 @@ func (f *Flags) Int(def int, name string, aliases ...string) flagInt {
 	return v
 }
 func (f *Flags) Int32(def int32, name string, aliases ...string) flagInt32 {
-	v := flagInt32{v: &def, s: new(bool), o: f.optional}
+	v := flagInt32{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -662,7 +721,7 @@ func (f *Flags) Int32(def int32, name string, aliases ...string) flagInt32 {
 	return v
 }
 func (f *Flags) Int64(def int64, name string, aliases ...string) flagInt64 {
-	v := flagInt64{v: &def, s: new(bool), o: f.optional}
+	v := flagInt64{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -670,7 +729,7 @@ func (f *Flags) Int64(def int64, name string, aliases ...string) flagInt64 {
 	return v
 }
 func (f *Flags) Float64(def float64, name string, aliases ...string) flagFloat64 {
-	v := flagFloat64{v: &def, s: new(bool), o: f.optional}
+	v := flagFloat64{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -678,7 +737,7 @@ func (f *Flags) Float64(def float64, name string, aliases ...string) flagFloat64
 	return v
 }
 func (f *Flags) IntCounter(def int, name string, aliases ...string) flagIntCounter {
-	v := flagIntCounter{v: &def, s: new(bool), o: f.optional}
+	v := flagIntCounter{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -686,7 +745,7 @@ func (f *Flags) IntCounter(def int, name string, aliases ...string) flagIntCount
 	return v
 }
 func (f *Flags) StringList(def []string, name string, aliases ...string) flagStringList {
-	v := flagStringList{v: &def, s: new(bool), o: f.optional}
+	v := flagStringList{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
@@ -694,7 +753,7 @@ func (f *Flags) StringList(def []string, name string, aliases ...string) flagStr
 	return v
 }
 func (f *Flags) IntList(def []int, name string, aliases ...string) flagIntList {
-	v := flagIntList{v: &def, s: new(bool), o: f.optional}
+	v := flagIntList{v: &def, s: new(bool), e: new(bool), o: f.optional}
 	if f.optional {
 		f.optional = false
 	}
