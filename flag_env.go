@@ -29,6 +29,7 @@ func (f *Flags) fromEnv(prefix string) error {
 		flag, ok := f.match(k)
 		if !ok {
 			unknown = append(unknown, key)
+			continue
 		}
 		err := setFromEnv(flag, k, v)
 		if err != nil {
@@ -38,7 +39,6 @@ func (f *Flags) fromEnv(prefix string) error {
 	if len(unknown) > 0 {
 		return ErrUnknownEnv{prefix, unknown}
 	}
-
 	return nil
 }
 

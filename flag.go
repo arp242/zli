@@ -34,8 +34,8 @@ type (
 
 	// ErrUnknownEnv is used when there are environment variables starting with
 	// prefix that do not correspond to any flags. This is returned after
-	// processing all environment variables so it's safe to only log a warning
-	// (or completely ignore).
+	// processing all environment variables and CLI flags so it's safe to only
+	// log a warning (or completely ignore).
 	ErrUnknownEnv struct {
 		Prefix string
 		Vars   []string
@@ -294,10 +294,15 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 		o(&opt)
 	}
 
+	var retErr error
 	if opt.fromEnv {
 		err := f.fromEnv(opt.envPrefix)
 		if err != nil {
-			return err
+			if errors.As(err, &ErrUnknownEnv{}) {
+				retErr = err
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -527,7 +532,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 		return ErrPositional{min: opt.pos[0], max: opt.pos[1], n: len(p)}
 	}
 	f.Args = p
-	return nil
+	return retErr
 }
 
 func acceptsValue(val flagValue) bool {
