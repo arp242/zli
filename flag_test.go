@@ -889,10 +889,9 @@ func TestDoubleParse(t *testing.T) {
 	}
 }
 
-// TODO: test single-letters are not overriden
 func TestFromEnv(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
-		f := zli.NewFlags([]string{"prog", "-str1=cli-value", "-bool1"})
+		f := zli.NewFlags([]string{"prog", "-str1=cli-value", "-bool1", "-str-num.four=x"})
 		var (
 			str1  = f.String("", "str1")
 			str2  = f.String("", "str2")
@@ -900,6 +899,8 @@ func TestFromEnv(t *testing.T) {
 			bool2 = f.Bool(false, "bool2", "alt-bool2")
 			bool3 = f.Bool(false, "bool3")
 			b     = f.Bool(false, "b")
+			str3  = f.String("", "str-num.three")
+			str4  = f.String("", "str-num.four")
 		)
 
 		os.Setenv("XX_STR1", "str1 from env")
@@ -907,8 +908,10 @@ func TestFromEnv(t *testing.T) {
 		os.Setenv("XX_BOOL2", "true")
 		os.Setenv("XX_BOOL3", "")
 		os.Setenv("XX_B", "")
+		os.Setenv("XX_STR_NUM_THREE", "str3 from env")
+		os.Setenv("XX_STR_NUM_FOUR", "str4 from env")
 		defer func() {
-			for _, k := range []string{"STR1", "STR2", "BOOL2", "BOOL3", "B"} {
+			for _, k := range []string{"STR1", "STR2", "BOOL2", "BOOL3", "B", "STR_NUM_THREE", "STR_NUM_FOUR"} {
 				os.Unsetenv("XX_" + k)
 			}
 		}()
@@ -916,9 +919,9 @@ func TestFromEnv(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		have := fmt.Sprintf("str1=%q str2=%q bool1=%t bool2=%t bool3=%t b=%t",
-			str1, str2, bool1.Bool(), bool2.Bool(), bool3.Bool(), b.Bool())
-		want := `str1="cli-value" str2="str2 from env" bool1=true bool2=true bool3=true b=false`
+		have := fmt.Sprintf("str1=%q str2=%q bool1=%t bool2=%t bool3=%t b=%t str3=%q str4=%q",
+			str1, str2, bool1.Bool(), bool2.Bool(), bool3.Bool(), b.Bool(), str3, str4)
+		want := `str1="cli-value" str2="str2 from env" bool1=true bool2=true bool3=true b=false str3="str3 from env" str4="x"`
 		if have != want {
 			t.Errorf("\nhave: %s\nwant: %s", have, want)
 		}

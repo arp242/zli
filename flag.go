@@ -322,7 +322,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 		}
 
 		/// Try to match the full string first, e.g. "-help", "-color".
-		_, ok := f.match(arg)
+		_, ok := f.match(arg, false)
 		if ok {
 			args = append(args, arg)
 			continue
@@ -340,7 +340,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 			shortarg = -1
 		)
 		for i, s := range split {
-			val, ok := f.match(s)
+			val, ok := f.match(s, false)
 			if !ok {
 				found = false
 				break
@@ -392,7 +392,7 @@ func (f *Flags) Parse(opts ...parseOpt) error {
 			break
 		}
 
-		flag, ok := f.match(a)
+		flag, ok := f.match(a, false)
 		if !ok {
 			if opt.allowUnknown {
 				p = append(p, a)
@@ -544,10 +544,27 @@ func acceptsValue(val flagValue) bool {
 	}
 }
 
-func (f *Flags) match(arg string) (flagValue, bool) {
-	arg = strings.ToLower(strings.ReplaceAll(strings.TrimLeft(arg, "-"), "_", "-"))
+func envName(s string) string {
+	n := make([]rune, 0, len(s))
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			n = append(n, r)
+		} else {
+			n = append(n, '_')
+		}
+	}
+	return strings.ToUpper(string(n))
+}
+
+func (f *Flags) match(arg string, env bool) (flagValue, bool) {
+	if !env {
+		arg = strings.ToLower(strings.ReplaceAll(strings.TrimLeft(arg, "-"), "_", "-"))
+	}
 	for _, flag := range f.flags {
 		for _, name := range flag.names {
+			if env {
+				name = envName(name)
+			}
 			if name == arg || strings.HasPrefix(arg, name+"=") {
 				return flag, true
 			}

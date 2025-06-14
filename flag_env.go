@@ -26,7 +26,7 @@ func (f *Flags) fromEnv(prefix string) error {
 			continue
 		}
 
-		flag, ok := f.match(k)
+		flag, ok := f.match(k, true)
 		if !ok {
 			unknown = append(unknown, key)
 			continue
