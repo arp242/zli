@@ -556,9 +556,18 @@ func envName(s string) string {
 	return strings.ToUpper(string(n))
 }
 
+func normalizeName(n string) string {
+	n = strings.TrimLeft(n, "-")
+	n = strings.ReplaceAll(n, "_", "-")
+	// if false {
+	// 	n = strings.ToLower(n)
+	// }
+	return n
+}
+
 func (f *Flags) match(arg string, env bool) (flagValue, bool) {
 	if !env {
-		arg = strings.ToLower(strings.ReplaceAll(strings.TrimLeft(arg, "-"), "_", "-"))
+		arg = normalizeName(arg)
 	}
 	for _, flag := range f.flags {
 		for _, name := range flag.names {
@@ -681,11 +690,11 @@ func (f flagIntList) setFromEnv() bool    { return *f.e }
 
 func (f *Flags) append(v any, n string, a ...string) {
 	for i := range a {
-		a[i] = strings.ToLower(strings.ReplaceAll(strings.TrimLeft(a[i], "-"), "_", "-"))
+		a[i] = normalizeName(a[i])
 	}
 	f.flags = append(f.flags, flagValue{
 		value: v,
-		names: append([]string{strings.ToLower(strings.ReplaceAll(strings.TrimLeft(n, "-"), "_", "-"))}, a...),
+		names: append([]string{normalizeName(n)}, a...),
 	})
 }
 
