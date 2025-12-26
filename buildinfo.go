@@ -9,59 +9,96 @@ import (
 	"time"
 )
 
-var (
-	progname = ""
-	version  = "dev"
-)
+var version, progname string
 
-// GetVersion gets this program's version.
-func GetVersion() (tag string, commit string, date time.Time) {
-	b, ok := debug.ReadBuildInfo()
-	if !ok {
-		return version, "failed reading detailed build info", time.Time{}
+// Verion gets a version string, as a tag name ("v2.1.0") or a hash and date
+// ("53097a4/2025-12-26"). Both may be followed by "(modified)" if built from a
+// modified source directory.
+//
+// The version global always takes precedence if set; this can be set at build
+// time with:
+//
+//	go build -ldflags "-X zgo.at/zli.version=v1.2.3"
+//
+// This can be any string and doesn't need to be SemVer; it's not parsed.
+func Version() string {
+	if version != "" {
+		return version
 	}
 
-	var vcs string
-	for _, s := range b.Settings {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "failed reading build info"
+	}
+
+	var (
+		tag         = info.Main.Version
+		vcs, commit string
+		mod         bool
+		date        time.Time
+	)
+	for _, s := range info.Settings {
 		switch s.Key {
-		case "vcs.revision":
-			commit = s.Value
-		case "vcs.time":
-			date, _ = time.Parse(time.RFC3339, s.Value)
 		case "vcs":
 			vcs = s.Value
+		case "vcs.revision":
+			commit = s.Value
+		case "vcs.modified":
+			mod = s.Value == "true"
+		case "vcs.time":
+			date, _ = time.Parse(time.RFC3339, s.Value)
 		}
 	}
 	if vcs == "git" && len(commit) > 8 {
 		commit = commit[:8]
 	}
-	return version, commit, date
+
+	// go install . w tag   → tag="v2.1.0";                               commit="fefa60ba"; vcs="git"
+	// go install [..]@tag  → tag="v2.0.0";                               commit="";         vcs=""
+	// go install . w/o tag → tag="v2.0.1-0.20251226200708-fefa60ba4a0a"; commit="fefa60ba"; vcs="git"
+	// go install [..]@hash → tag="v2.0.1-0.20251218155453-229ce2e7bb56"; commit="";         vcs=""
+
+	if strings.HasSuffix(tag, "+dirty") {
+		tag, mod = tag[:len(tag)-6], true
+	}
+	split := strings.Split(tag, "-")
+	if len(split) == 3 {
+		_, split[1], _ = strings.Cut(split[1], ".")
+		if commit == "" {
+			commit = split[2]
+		}
+		if date.IsZero() {
+			date, _ = time.Parse("20060102150405", split[1])
+		}
+		tag = fmt.Sprintf("%s/%s", commit, date.Format("2006-01-02"))
+	}
+	if mod {
+		tag += " (modified)"
+	}
+	return tag
 }
 
 // PrintVersion prints this program's version.
 //
-// The format is:
+// The format is one of:
 //
-//	prog 336b4c73 2024-06-07; go1.22.4 linux/amd64; race=false; cgo=false
+//	prog v2.0.0; go1.25.5 linux/amd64; race=false; cgo=true
+//	prog 229ce2e7bb56/2025-12-18; go1.25.5 linux/amd64; race=false; cgo=true
 //
-// Where prog is os.Args[0], followed by the commit and date of the commit. You
-// can print a tagged version by setting zgo.at/zli.version at build time:
+// The version can be overridden by setting the version global at build time.
 //
-//	go build -ldflags "-X zgo.at/zli.version=v1.2.3"
-//
-// After which it will print:
-//
-//	elles v1.2.3 336b4c73 2024-06-07; go1.22.4 linux/amd64; race=false; cgo=true
-//
-// In addition, zgo.at/zli.progname can be set to override os.Args[0]:
+// The program name is normally taken from os.Args[0], but can be overridden at
+// build time by setting the progname global. The version string can similarly
+// be overridden with the version global:
 //
 //	go build -ldflags '-X "zgo.at/zli.version=VERSION" -X "zgo.at/zli.progname=PROG"'
 //
 // If verbose is true it also prints detailed build information (similar to "go
 // version -m bin")
 func PrintVersion(verbose bool) {
-	if progname == "" && len(os.Args) > 0 {
-		progname = filepath.Base(os.Args[0])
+	prog := progname
+	if prog == "" && len(os.Args) > 0 {
+		prog = filepath.Base(os.Args[0])
 	}
 
 	info, ok := debug.ReadBuildInfo()
@@ -70,9 +107,8 @@ func PrintVersion(verbose bool) {
 	}
 
 	var (
-		race, cgo, mod            bool
-		goos, goarch, commit, vcs string
-		date                      time.Time
+		race, cgo    bool
+		goos, goarch string
 	)
 	for _, s := range info.Settings {
 		switch s.Key {
@@ -84,37 +120,11 @@ func PrintVersion(verbose bool) {
 			goarch = s.Value
 		case "GOOS":
 			goos = s.Value
-		case "vcs.revision":
-			commit = s.Value
-		case "vcs.time":
-			date, _ = time.Parse(time.RFC3339, s.Value)
-		case "vcs.modified":
-			mod = s.Value == "true"
-		case "vcs":
-			vcs = s.Value
 		}
-	}
-	if vcs == "git" && len(commit) > 8 {
-		commit = commit[:8]
-	}
-
-	v := make([]string, 0, 4)
-	if version != "" && version != "dev" {
-		v = append(v, version)
-	}
-	if commit != "" {
-		v = append(v, commit)
-	}
-	if !date.IsZero() {
-		v = append(v, date.Format("2006-01-02"))
-	}
-	if mod {
-		v = append(v, "(modified)")
 	}
 
 	fmt.Fprintf(Stdout, "%s %s; %s %s/%s; race=%t; cgo=%t\n",
-		progname, strings.Join(v, " "), info.GoVersion, goos, goarch, race, cgo)
-
+		prog, Version(), info.GoVersion, goos, goarch, race, cgo)
 	if verbose && info != nil {
 		fmt.Fprint(Stdout, "\n", info)
 	}
