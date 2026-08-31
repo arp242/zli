@@ -2,7 +2,7 @@ package zli
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 )
@@ -38,7 +38,7 @@ func TestTest(t *testing.T) {
 
 	in.WriteString("Hello")
 	fp, _ := InputOrFile("-", true)
-	got, _ := ioutil.ReadAll(fp)
+	got, _ := io.ReadAll(fp)
 	if string(got) != "Hello" {
 		t.Errorf("wrong stdin: %q", string(got))
 	}

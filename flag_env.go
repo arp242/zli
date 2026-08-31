@@ -100,7 +100,7 @@ func setFromEnv(flag flagValue, k, val string) error {
 		*v.s, *v.e, *v.v = true, true, strings.Split(val, ",")
 	case flagIntList:
 		*v.s, *v.e, *v.v = true, true, nil
-		for _, n := range strings.Split(val, ",") {
+		for n := range strings.SplitSeq(val, ",") {
 			x, err := strconv.ParseInt(n, 0, 64)
 			if err != nil {
 				if nErr := errors.Unwrap(err); nErr != nil {

@@ -155,15 +155,15 @@ func brightTest(name string) {
 
 func pr(t []zli.Color, w int) string {
 	pad := strings.Repeat(" ", 10)
-	out := ""
+	var out strings.Builder
 	for i, c := range t {
-		out += c.String() + " "
+		out.WriteString(c.String() + " ")
 		if i > 0 && (i+1)%w == 0 {
-			out += zli.Reset.String() + "\n" + pad
+			out.WriteString(zli.Reset.String() + "\n" + pad)
 		}
 	}
 
-	return out + zli.Reset.String() +
+	return out.String() + zli.Reset.String() +
 		fmt.Sprintf("\n%s%s → %s in %d steps", pad, cname(t[0]), cname(t[len(t)-1]), len(t)-1)
 }
 

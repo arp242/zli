@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -60,7 +61,8 @@ func main() {
 			for i, nn := range n {
 				for j, line := range strings.Split(nn, "\n") {
 					line = strings.ReplaceAll(line, "X", cell)
-					zli.To(r+j, c+(6*i), line)
+					zli.To(r+j, c+(6*i), "")
+					fmt.Print(line)
 				}
 			}
 		}

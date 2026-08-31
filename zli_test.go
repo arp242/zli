@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/mail"
 	"os"
 	"reflect"
@@ -49,9 +48,9 @@ func TestFatal(t *testing.T) {
 			if *exit != 1 {
 				t.Errorf("wrong exit: %d", *exit)
 			}
-			got := out.String()
-			if got != tt.want {
-				t.Errorf("\ngot:  %q\nwant: %q", got, tt.want)
+			have := out.String()
+			if have != tt.want {
+				t.Errorf("\nhave: %q\nwant: %q", have, tt.want)
 			}
 		})
 	}
@@ -105,7 +104,7 @@ func TestInputOrFile(t *testing.T) {
 
 			fp, err := InputOrFile(tt.in, true)
 			if !errorContains(err, tt.wantErr) {
-				t.Errorf("wrong error\ngot:  %s\nwant: %s", err, tt.wantErr)
+				t.Errorf("wrong error\nhave: %s\nwant: %s", err, tt.wantErr)
 			}
 
 			// No need to test the test if there's an error.
@@ -117,7 +116,7 @@ func TestInputOrFile(t *testing.T) {
 				t.Fatal("fp is nil")
 			}
 
-			got, err := ioutil.ReadAll(fp)
+			have, err := io.ReadAll(fp)
 			if err != nil {
 				t.Errorf("error reading fp: %s", err)
 			}
@@ -127,12 +126,12 @@ func TestInputOrFile(t *testing.T) {
 				t.Errorf("error closing fp: %s", err)
 			}
 
-			g := string(got)
+			g := string(have)
 			if len(g) > len(tt.want) {
 				g = g[:len(tt.want)]
 			}
 			if !strings.HasPrefix(g, tt.want) {
-				t.Errorf("wrong output\ngot:  %q\nwant: %q", g, tt.want)
+				t.Errorf("wrong output\nhave: %q\nwant: %q", g, tt.want)
 			}
 		})
 	}
@@ -162,13 +161,13 @@ func TestInputOrArgs(t *testing.T) {
 			Stdin = tt.stdin
 			defer func() { Stdin = os.Stdin }()
 
-			got, err := InputOrArgs(tt.in, tt.sep, true)
+			have, err := InputOrArgs(tt.in, tt.sep, true)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("\ngot:  %#v\nwant: %#v", got, tt.want)
+			if !reflect.DeepEqual(have, tt.want) {
+				t.Errorf("\nhave: %#v\nwant: %#v", have, tt.want)
 			}
 		})
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 
 	"zgo.at/zli"
@@ -146,8 +147,7 @@ func main() {
 			// matches in reverse order so the inserted color codes for the
 			// first match won't affect the string indexing for the second
 			// match.
-			for i := len(match) - 1; i >= 0; i-- {
-				m := match[i]
+			for _, m := range slices.Backward(match) {
 				if only.Set() {
 					l = zli.Colorize(l[m[0]:m[1]], colorMatch)
 				} else {

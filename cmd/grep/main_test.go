@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func read(t *testing.T, f string) string {
-	d, err := ioutil.ReadFile(f)
+	d, err := os.ReadFile(f)
 	if err != nil {
 		t.Fatal(err)
 	}

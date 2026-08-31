@@ -311,8 +311,8 @@ func TestX(t *testing.T) {
     // Read from stdin.
     in.WriteString("Hello")
     fp, _ := InputOrFile("-", true)
-    got, _ := ioutil.ReadAll(fp)
-    fmt.Println(string(got)) // Hello
+    have, _ := io.ReadAll(fp)
+    fmt.Println(string(have)) // Hello
 
     out.Reset()
 

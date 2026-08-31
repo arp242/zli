@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -92,7 +91,7 @@ func InputOrFile(path string, quiet bool) (io.ReadCloser, error) {
 	}
 
 	if !quiet && IsTerminal(os.Stdin.Fd()) {
-		fmt.Fprintf(Stderr, Program()+": "+StdinMessage+"\r")
+		fmt.Fprint(Stderr, Program()+": "+StdinMessage+"\r")
 		os.Stderr.Sync()
 	}
 	return io.NopCloser(Stdin), nil
@@ -149,10 +148,10 @@ func InputOrArgs(args []string, sep string, quiet bool) ([]string, error) {
 	interactive := IsTerminal(os.Stdin.Fd())
 
 	if !quiet && interactive {
-		fmt.Fprintf(Stderr, Program()+": "+StdinMessage)
+		fmt.Fprint(Stderr, Program()+": "+StdinMessage)
 		os.Stderr.Sync()
 	}
-	in, err := ioutil.ReadAll(Stdin)
+	in, err := io.ReadAll(Stdin)
 	if err != nil {
 		return nil, fmt.Errorf("zli.InputOrArgs: read stdin: %w", err)
 	}
